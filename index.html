@@ -7,121 +7,127 @@
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Sarabun', sans-serif; background: #f0f2f5; color: #2c2c2c; font-size: 14px; }
+body { font-family: 'Sarabun', sans-serif; background: #111; color: #ccc; font-size: 14px; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 
-.header { background: #1a1a2e; color: white; padding: 14px 20px; display: flex; align-items: center; gap: 16px; }
-.header-title { font-size: 16px; font-weight: 500; }
-.header-sub { font-size: 12px; opacity: 0.5; margin-top: 2px; }
+.header { background: #0d0d0d; color: white; padding: 10px 20px; display: flex; align-items: center; border-bottom: 1px solid #222; flex-shrink: 0; }
+.header-title { font-size: 15px; font-weight: 500; }
+.header-sub { font-size: 11px; opacity: 0.4; margin-top: 1px; }
 
-.top-bar { background: white; padding: 10px 20px; border-bottom: 1px solid #e8e8e8; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.top-bar select, .top-bar input { border: 1px solid #ddd; border-radius: 6px; padding: 6px 10px; font-size: 13px; font-family: 'Sarabun', sans-serif; outline: none; background: white; }
+.top-bar { background: #161616; padding: 8px 16px; border-bottom: 1px solid #222; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex-shrink: 0; }
+.top-bar select { border: 1px solid #333; border-radius: 6px; padding: 5px 10px; font-size: 13px; font-family: 'Sarabun', sans-serif; outline: none; background: #1e1e1e; color: #ccc; }
 .top-bar select:focus { border-color: #5c6bc0; }
-
 .view-tabs { display: flex; gap: 4px; margin-left: auto; }
-.tab-btn { padding: 6px 14px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-size: 13px; font-family: 'Sarabun', sans-serif; color: #555; }
-.tab-btn.active { background: #1a1a2e; color: white; border-color: #1a1a2e; }
+.tab-btn { padding: 5px 12px; border: 1px solid #333; border-radius: 6px; background: #1e1e1e; cursor: pointer; font-size: 13px; font-family: 'Sarabun', sans-serif; color: #888; }
+.tab-btn.active { background: #5c6bc0; color: white; border-color: #5c6bc0; }
+.reset-btn { padding: 5px 12px; border: 1px solid #c62828; border-radius: 6px; background: #1e1e1e; cursor: pointer; font-size: 13px; font-family: 'Sarabun', sans-serif; color: #ef5350; }
+.reset-btn:hover { background: #2a0a0a; }
 
-.nav-bar { background: white; padding: 8px 20px; border-bottom: 1px solid #e8e8e8; display: flex; align-items: center; gap: 10px; }
-.nav-btn { background: #f5f5f5; border: 1px solid #ddd; border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 16px; }
-.nav-btn:hover { background: #eee; }
-.month-label { font-size: 15px; font-weight: 500; min-width: 150px; }
+.legend { background: #161616; padding: 6px 16px; border-bottom: 1px solid #222; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; flex-shrink: 0; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #555; }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
 
-.legend { background: white; padding: 8px 20px; border-bottom: 1px solid #e8e8e8; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
-.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #666; }
-.legend-dot { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+.store-count { font-size: 11px; color: #555; padding: 4px 16px; background: #161616; border-bottom: 1px solid #222; flex-shrink: 0; }
 
-.store-info-bar { background: #f8f9ff; border-bottom: 1px solid #e8e8e8; padding: 10px 20px; display: none; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
-.store-info-bar.show { display: flex; }
-.info-group { display: flex; flex-direction: column; gap: 2px; }
-.info-label { font-size: 11px; color: #888; }
-.info-val { font-size: 14px; font-weight: 500; color: #1a1a2e; }
-.date-chip { border-radius: 4px; padding: 2px 8px; font-size: 11px; display: inline-block; margin: 2px 2px 0 0; }
+.main-layout { display: flex; flex: 1; overflow: hidden; }
 
-.store-count { font-size: 12px; color: #999; padding: 6px 20px; background: white; border-bottom: 1px solid #e8e8e8; }
+/* ซ้าย 30% detail panel */
+.detail-panel { width: 30%; border-right: 1px solid #222; display: flex; flex-direction: column; background: #141414; overflow: hidden; flex-shrink: 0; }
+.detail-store-info { background: #1a1a1a; padding: 12px 14px; border-bottom: 1px solid #222; flex-shrink: 0; }
+.detail-store-name { font-size: 14px; font-weight: 500; color: #fff; margin-bottom: 4px; }
+.detail-store-meta { font-size: 11px; color: #555; margin-bottom: 6px; }
+.detail-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.detail-chip { font-size: 10px; padding: 2px 7px; border-radius: 4px; }
+.detail-timeline { padding: 10px 14px; overflow-y: auto; flex: 1; }
+.tl-section { font-size: 10px; font-weight: 500; color: #444; letter-spacing: 0.5px; text-transform: uppercase; margin: 8px 0 5px; }
+.tl-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.tl-date { width: 52px; font-size: 10px; color: #555; flex-shrink: 0; }
+.tl-event { border-radius: 3px; padding: 2px 7px; font-size: 11px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.tl-event:hover { opacity: 0.8; }
+.detail-empty { color: #444; font-size: 12px; padding: 20px 0; text-align: center; }
 
-.cal-wrap { padding: 14px 20px; }
-.calendar { background: white; border-radius: 10px; overflow: hidden; border: 1px solid #e0e0e0; }
-.day-headers { display: grid; grid-template-columns: repeat(7, 1fr); background: #f9f9f9; border-bottom: 1px solid #e8e8e8; }
-.day-header { padding: 8px; text-align: center; font-size: 12px; font-weight: 500; color: #888; }
+/* ขวา 70% ปฏิทิน */
+.cal-side { width: 70%; display: flex; flex-direction: column; overflow: hidden; }
+.nav-bar { background: #0d0d0d; padding: 6px 16px; border-bottom: 1px solid #222; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.nav-btn { background: #1e1e1e; border: 1px solid #333; border-radius: 6px; padding: 4px 12px; cursor: pointer; font-size: 16px; color: #888; }
+.nav-btn:hover { background: #2a2a2a; }
+.month-label { font-size: 14px; font-weight: 500; color: #ccc; min-width: 160px; }
+
+.calendar { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+.day-headers { display: grid; grid-template-columns: repeat(7,1fr); background: #0d0d0d; border-bottom: 1px solid #222; flex-shrink: 0; }
+.day-header { padding: 6px; text-align: center; font-size: 12px; font-weight: 500; color: #555; }
 .day-header.sun { color: #e53935; }
 .day-header.sat { color: #1e88e5; }
 
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
-.cal-cell { border-right: 0.5px solid #f0f0f0; border-bottom: 0.5px solid #f0f0f0; height: calc((100vh - 280px) / 5); min-height: 80px; padding: 6px; overflow: hidden; box-sizing: border-box; }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); flex: 1; }
+.cal-cell { border-right: 0.5px solid #1e1e1e; border-bottom: 0.5px solid #1e1e1e; padding: 5px; overflow: hidden; }
 .cal-cell:nth-child(7n) { border-right: none; }
-.cal-cell.fair-peak { background: #FFE0B2; }
-.cal-cell.fair-normal { background: #FFF8E1; }
-.other-month { background: #fafafa; }
-.other-month .day-num { color: #ccc !important; }
 
-.day-num { font-size: 14px; font-weight: 500; color: #444; margin-bottom: 4px; display: inline-flex; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: 50%; }
-.day-num.today { background: #1a1a2e; color: white; }
+.month-even { background: #161616; }
+.month-odd  { background: #121212; }
+.cal-cell.fair-peak  { background: #1a1000 !important; }
+.cal-cell.fair-normal { background: #141000 !important; }
+.cal-cell.is-today   { background: #1a0000 !important; outline: 2px solid #e53935; outline-offset: -2px; }
+
+.week-month-bar { grid-column: 1/-1; padding: 2px 8px; font-size: 10px; font-weight: 500; height: 20px; line-height: 16px; }
+.week-month-bar.month-even { background: #0d2010; color: #66BB6A; }
+.week-month-bar.month-odd  { background: #1a0d2a; color: #CE93D8; }
+.new-month-border { border-left: 2px solid #5c6bc0 !important; }
+
+.day-num { font-size: 13px; font-weight: 500; color: #666; margin-bottom: 3px; display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center; border-radius: 50%; }
+.day-num.today { background: #e53935 !important; color: white !important; font-weight: 700 !important; }
 .day-num.sun { color: #e53935; }
 .day-num.sat { color: #1e88e5; }
+.other-month .day-num { color: #333 !important; }
 
-.event { border-radius: 3px; padding: 2px 6px; font-size: 13px; margin-bottom: 3px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.event:hover { opacity: 0.8; }
-
-.color-food-pick    { background: #BBDEFB; color: #0D47A1; }
-.color-food-del     { background: #64B5F6; color: #0D47A1; }
-.color-store-pick   { background: #C8E6C9; color: #1B5E20; }
-.color-store-del    { background: #81C784; color: #1B5E20; }
-.color-bao-pick     { background: #E1BEE7; color: #4A148C; }
-.color-bao-del      { background: #BA68C8; color: #4A148C; }
-.color-nonfood-pick { background: #FFE0B2; color: #BF360C; }
-.color-nonfood-del  { background: #FFB74D; color: #BF360C; }
-.color-life-pick    { background: #B2EBF2; color: #006064; }
-.color-life-del     { background: #4DD0E1; color: #006064; }
-.color-pro-pick     { background: #F8BBD0; color: #880E4F; }
-.color-pro-del      { background: #F48FB1; color: #880E4F; }
-.color-chill-pick   { background: #DCEDC8; color: #33691E; }
-.color-chill-del    { background: #AED581; color: #33691E; }
-.color-open         { background: #37474F; color: white; }
-.color-task         { background: #FFF9C4; color: #E65100; border: 1px solid #FFE082; }
-
-.loading { text-align: center; padding: 50px; color: #aaa; font-size: 14px; }
-.event-more { font-size: 12px; color: #5c6bc0; padding: 1px 4px; cursor: pointer; font-weight: 500; }
-.cal-cell.is-today { background: #fff5f5; outline: 3px solid #e53935; outline-offset: -3px; }
-.day-num.today { background: #e53935 !important; color: white !important; font-weight: 700 !important; }
-.month-label-cell { font-size: 10px; font-weight: 500; color: #5c6bc0; background: #f0f4ff; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; display: block; }
-.new-month-border { border-left: 2px solid #5c6bc0 !important; }
-.month-even { background: #ffffff; }
-.month-odd  { background: #f5f5f5; }
-.cal-cell.fair-peak.month-even, .cal-cell.fair-peak.month-odd { background: #FFE0B2; }
-.cal-cell.fair-normal.month-even, .cal-cell.fair-normal.month-odd { background: #FFF8E1; }
-.cal-cell.is-today.month-even, .cal-cell.is-today.month-odd { background: #fff5f5; }
-.week-row { display: contents; }
-.week-month-bar { grid-column: 1 / -1; border-bottom: 1px solid #ddd; padding: 3px 10px; font-size: 12px; font-weight: 500; height: 24px; line-height: 18px; }
-.week-month-bar.month-even { background: #e8f5e9; color: #2e7d32; }
-.week-month-bar.month-odd  { background: #f3e5f5; color: #6a1b9a; }
-.reset-btn { padding: 6px 14px; border: 1px solid #e53935; border-radius: 6px; background: white; cursor: pointer; font-size: 13px; font-family: 'Sarabun', sans-serif; color: #e53935; }
-.reset-btn:hover { background: #fff5f5; }
+.event { border-radius: 3px; padding: 1px 5px; font-size: 11px; margin-bottom: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.9; }
+.event:hover { opacity: 1; }
+.event-more { font-size: 11px; color: #5c6bc0; padding: 1px 4px; cursor: pointer; font-weight: 500; }
 .event-more:hover { text-decoration: underline; }
-.day-popup-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 300; align-items: center; justify-content: center; }
+
+.color-food-pick    { background: #0D2137; color: #64B5F6; }
+.color-food-del     { background: #0a1a2e; color: #90CAF9; border-left: 2px solid #64B5F6; }
+.color-store-pick   { background: #0D2110; color: #81C784; }
+.color-store-del    { background: #081a0a; color: #A5D6A7; border-left: 2px solid #81C784; }
+.color-bao-pick     { background: #1a0d2a; color: #CE93D8; }
+.color-bao-del      { background: #130820; color: #E1BEE7; border-left: 2px solid #CE93D8; }
+.color-nonfood-pick { background: #2a1800; color: #FFB74D; }
+.color-nonfood-del  { background: #1e1000; color: #FFD54F; border-left: 2px solid #FFB74D; }
+.color-life-pick    { background: #002a2a; color: #4DD0E1; }
+.color-life-del     { background: #001e1e; color: #80DEEA; border-left: 2px solid #4DD0E1; }
+.color-pro-pick     { background: #2a0a1a; color: #F48FB1; }
+.color-pro-del      { background: #1e0612; color: #F8BBD0; border-left: 2px solid #F48FB1; }
+.color-chill-pick   { background: #1a2a00; color: #AED581; }
+.color-chill-del    { background: #121e00; color: #DCEDC8; border-left: 2px solid #AED581; }
+.color-open         { background: #263238; color: #ECEFF1; }
+.color-task         { background: #2a2200; color: #FFD54F; border: 1px solid #5a4a00; }
+
+.loading { text-align: center; padding: 50px; color: #444; font-size: 14px; }
+
+.day-popup-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 300; align-items: center; justify-content: center; }
 .day-popup-bg.show { display: flex; }
-.day-popup { background: white; border-radius: 10px; padding: 16px; min-width: 240px; max-width: 320px; max-height: 70vh; overflow-y: auto; }
-.day-popup-title { font-size: 14px; font-weight: 500; margin-bottom: 10px; color: #1a1a2e; }
-.day-popup-close { float: right; background: none; border: none; font-size: 18px; cursor: pointer; color: #aaa; margin-top: -4px; }
+.day-popup { background: #1e1e1e; border: 1px solid #333; border-radius: 10px; padding: 16px; min-width: 240px; max-width: 320px; max-height: 70vh; overflow-y: auto; }
+.day-popup-title { font-size: 14px; font-weight: 500; margin-bottom: 10px; color: #fff; }
+.day-popup-close { float: right; background: none; border: none; font-size: 18px; cursor: pointer; color: #555; margin-top: -4px; }
 
-.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; align-items: center; justify-content: center; }
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; align-items: center; justify-content: center; }
 .modal-bg.show { display: flex; }
-.modal { background: white; border-radius: 12px; padding: 20px; max-width: 460px; width: 92%; max-height: 85vh; overflow-y: auto; }
+.modal { background: #1e1e1e; border: 1px solid #333; border-radius: 12px; padding: 20px; max-width: 460px; width: 92%; max-height: 85vh; overflow-y: auto; }
 .modal-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
-.modal-title { font-size: 16px; font-weight: 500; }
-.modal-sub { font-size: 12px; color: #999; margin-top: 2px; }
-.modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #aaa; line-height: 1; }
-.modal-section { font-size: 11px; font-weight: 500; color: #aaa; letter-spacing: 0.5px; margin: 12px 0 6px; text-transform: uppercase; }
-.modal-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 0.5px solid #f5f5f5; font-size: 13px; }
+.modal-title { font-size: 16px; font-weight: 500; color: #fff; }
+.modal-sub { font-size: 12px; color: #555; margin-top: 2px; }
+.modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #555; line-height: 1; }
+.modal-section { font-size: 11px; font-weight: 500; color: #444; letter-spacing: 0.5px; margin: 12px 0 6px; text-transform: uppercase; }
+.modal-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 0.5px solid #222; font-size: 13px; }
 .modal-row:last-child { border-bottom: none; }
-.modal-key { color: #888; }
-.modal-val { font-weight: 500; }
+.modal-key { color: #555; }
+.modal-val { font-weight: 500; color: #ccc; }
 
-.config-wrap { padding: 14px 20px; }
-.config-title { font-size: 14px; font-weight: 500; margin-bottom: 10px; }
-.config-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; border: 1px solid #e0e0e0; }
-.config-table th { background: #f9f9f9; padding: 10px 14px; text-align: left; font-size: 12px; color: #888; font-weight: 500; }
-.config-table td { padding: 8px 14px; border-top: 0.5px solid #f0f0f0; font-size: 13px; }
-.config-table select { border: 1px solid #ddd; border-radius: 4px; padding: 3px 8px; font-size: 12px; font-family: 'Sarabun', sans-serif; }
+.config-wrap { padding: 14px; background: #111; }
+.config-title { font-size: 14px; font-weight: 500; margin-bottom: 10px; color: #ccc; }
+.config-table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 10px; overflow: hidden; border: 1px solid #333; }
+.config-table th { background: #161616; padding: 10px 14px; text-align: left; font-size: 12px; color: #555; font-weight: 500; }
+.config-table td { padding: 8px 14px; border-top: 0.5px solid #222; font-size: 13px; color: #aaa; }
+.config-table select { border: 1px solid #333; border-radius: 4px; padding: 3px 8px; font-size: 12px; font-family: 'Sarabun', sans-serif; background: #111; color: #ccc; }
 </style>
 </head>
 <body>
@@ -137,7 +143,6 @@ body { font-family: 'Sarabun', sans-serif; background: #f0f2f5; color: #2c2c2c; 
   <select id="storeSelect" style="width:260px">
     <option value="">-- ทุกร้าน --</option>
   </select>
-
   <button class="reset-btn" id="resetBtn">↺ Reset</button>
   <div class="view-tabs">
     <button class="tab-btn active" data-tab="all">Overall</button>
@@ -147,38 +152,40 @@ body { font-family: 'Sarabun', sans-serif; background: #f0f2f5; color: #2c2c2c; 
   </div>
 </div>
 
-<div class="nav-bar">
-  <button class="nav-btn" id="prevMonth">&#8249;</button>
-  <div class="month-label" id="monthLabel"></div>
-  <button class="nav-btn" id="nextMonth">&#8250;</button>
-</div>
-
 <div class="legend">
-  <div class="legend-item"><div class="legend-dot" style="background:#BBDEFB"></div>จัด Food</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#64B5F6"></div>ส่ง Food (D-4)</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#C8E6C9"></div>จัด Store Use</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#81C784"></div>ส่ง Store Use (D-4)</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#E1BEE7"></div>จัด Bao Café</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#BA68C8"></div>ส่ง Bao Café (D-4)</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#FFE0B2"></div>จัด Non Food</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#FFB74D"></div>ส่ง Non Food (D-3)</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#B2EBF2"></div>จัด Life Style</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#4DD0E1"></div>ส่ง Life Style (D-3)</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#F8BBD0"></div>จัด Pro</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#F48FB1"></div>ส่ง Pro (D-2)</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#DCEDC8"></div>จัด Chilled</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#AED581"></div>ส่ง Chilled (D-1)</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#37474F"></div>วันเปิดร้าน</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#FFF9C4;border:1px solid #FFE082"></div>Tasks</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#FFE0B2;border:1px solid #ccc"></div>Grand Fair Peak</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#FFF8E1;border:1px solid #ccc"></div>Grand Fair Normal</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#0D2137;border:1px solid #64B5F6"></div>จัด Food</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#0a1a2e;border-left:2px solid #64B5F6"></div>ส่ง Food</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#0D2110;border:1px solid #81C784"></div>จัด Store Use</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1a0d2a;border:1px solid #CE93D8"></div>จัด Bao</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#2a1800;border:1px solid #FFB74D"></div>จัด Non Food</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#002a2a;border:1px solid #4DD0E1"></div>จัด Life Style</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#2a0a1a;border:1px solid #F48FB1"></div>จัด Pro</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1a2a00;border:1px solid #AED581"></div>จัด Chilled</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#263238"></div>วันเปิดร้าน</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#2a2200;border:1px solid #5a4a00"></div>Tasks</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1a1000"></div>Grand Fair Peak</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#141000"></div>Grand Fair Normal</div>
 </div>
 
-<div class="store-info-bar" id="storeInfoBar"></div>
 <div class="store-count" id="storeCount"></div>
 
-<div id="calView">
-  <div class="cal-wrap">
+<div class="main-layout">
+
+  <!-- ซ้าย: detail panel -->
+  <div class="detail-panel" id="detailPanel">
+    <div class="detail-store-info" id="detailStoreInfo">
+      <div class="detail-empty">เลือกร้านเพื่อดูรายละเอียด</div>
+    </div>
+    <div class="detail-timeline" id="detailTimeline"></div>
+  </div>
+
+  <!-- ขวา: ปฏิทิน -->
+  <div class="cal-side" id="calView">
+    <div class="nav-bar">
+      <button class="nav-btn" id="prevMonth">&#8249;</button>
+      <div class="month-label" id="monthLabel"></div>
+      <button class="nav-btn" id="nextMonth">&#8250;</button>
+    </div>
     <div class="calendar">
       <div class="day-headers">
         <div class="day-header sun">อา</div>
@@ -194,16 +201,18 @@ body { font-family: 'Sarabun', sans-serif; background: #f0f2f5; color: #2c2c2c; 
       </div>
     </div>
   </div>
-</div>
 
-<div id="configView" style="display:none">
-  <div class="config-wrap">
-    <div class="config-title">จัดกลุ่ม Schedule / Tasks</div>
-    <table class="config-table">
-      <thead><tr><th>รายการ</th><th>กลุ่ม</th></tr></thead>
-      <tbody id="configBody"></tbody>
-    </table>
+  <!-- config view -->
+  <div id="configView" style="display:none; flex:1; overflow-y:auto;">
+    <div class="config-wrap">
+      <div class="config-title">จัดกลุ่ม Schedule / Tasks</div>
+      <table class="config-table">
+        <thead><tr><th>รายการ</th><th>กลุ่ม</th></tr></thead>
+        <tbody id="configBody"></tbody>
+      </table>
+    </div>
   </div>
+
 </div>
 
 <div class="day-popup-bg" id="dayPopupBg">
@@ -230,35 +239,24 @@ body { font-family: 'Sarabun', sans-serif; background: #f0f2f5; color: #2c2c2c; 
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRo75-UkhXcDBNDjcw8SpyjTNZZq1w6mZoRUxYAYd1FO4sAQGMkuHzD4bx0CupUHFaGSMYwRsaQ4RoW/pub?gid=0&single=true&output=csv";
 const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+const THAI_MONTHS_SHORT = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
-let allStores = [];
-let currentTab = "all";
+let allStores = [], currentTab = "all";
+const today = new Date(); today.setHours(0,0,0,0);
 
-const today = new Date();
-today.setHours(0,0,0,0);
-
-function getWeekStart(d) {
-  const x = new Date(d);
-  x.setDate(x.getDate() - x.getDay());
-  x.setHours(0,0,0,0);
-  return x;
-}
-
+function getWeekStart(d) { const x = new Date(d); x.setDate(x.getDate()-x.getDay()); x.setHours(0,0,0,0); return x; }
 let viewStart = getWeekStart(today);
 
-// แก้ bug +1 วัน: parse date string เป็น local time ไม่ใช่ UTC
 function parseDate(str) {
   if (!str || str.length < 10) return null;
-  const parts = str.substring(0,10).split("-");
-  if (parts.length !== 3) return null;
-  return new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+  const p = str.substring(0,10).split("-");
+  if (p.length !== 3) return null;
+  return new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
 }
-
 function dateToStr(d) {
   if (!d) return "";
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-
 function todayStr() { return dateToStr(today); }
 
 const SCHEDULE_ITEMS = [
@@ -312,12 +310,7 @@ function parseCSV(text) {
 
 function getFilteredStores() {
   const storeVal = document.getElementById("storeSelect").value;
-
-  return allStores.filter(s => {
-    if (storeVal && s["Nest Store Code"] !== storeVal) return false;
-
-    return true;
-  });
+  return allStores.filter(s => !storeVal || s["Nest Store Code"] === storeVal);
 }
 
 function getActiveItems() {
@@ -329,7 +322,6 @@ function getActiveItems() {
 function buildEventMap(stores) {
   const map = {};
   stores.forEach(store => {
-    // Grand Fair fill — ใช้ parseDate แก้ bug timezone
     const openD = parseDate(store["Grand Open Date"]);
     if (openD) {
       for (let n = 0; n <= 4; n++) {
@@ -345,13 +337,12 @@ function buildEventMap(stores) {
         if (!map[k].fairType) map[k].fairType = "normal";
       }
     }
-
     const seenKeys = new Set();
     getActiveItems().forEach(item => {
       const d = parseDate(store[item.key]);
       if (!d) return;
       const k = dateToStr(d);
-      const dedupKey = k + "_" + item.key + "_" + (store["Nest Store Code"]||"");
+      const dedupKey = k+"_"+item.key+"_"+(store["Nest Store Code"]||"");
       if (seenKeys.has(dedupKey)) return;
       seenKeys.add(dedupKey);
       if (!map[k]) map[k] = { events:[], fairType:null };
@@ -367,53 +358,45 @@ function renderCalendar() {
   const grid = document.getElementById("calGrid");
   grid.innerHTML = "";
 
-  // แสดง 5 สัปดาห์ = 35 วัน
-  const totalCells = 35;
-  const tStr = todayStr();
-
-  // label แสดงช่วงวัน
-  const endDate = new Date(viewStart);
-  endDate.setDate(endDate.getDate() + 34);
+  const endDate = new Date(viewStart); endDate.setDate(endDate.getDate()+34);
   const startM = THAI_MONTHS[viewStart.getMonth()];
   const endM = THAI_MONTHS[endDate.getMonth()];
-  const label = viewStart.getMonth() === endDate.getMonth()
+  document.getElementById("monthLabel").textContent = viewStart.getMonth() === endDate.getMonth()
     ? `${startM} ${viewStart.getFullYear()}`
     : `${startM} – ${endM} ${endDate.getFullYear()}`;
-  document.getElementById("monthLabel").textContent = label;
   document.getElementById("storeCount").textContent = `แสดง ${stores.length} ร้านที่ยังไม่เปิด`;
 
+  const tStr = todayStr();
+  const totalCells = 35;
+  const cellH = `calc((100% - ${5 * 20}px) / 5)`;
+
   for (let i = 0; i < totalCells; i++) {
-    // ใส่ month bar ทุกต้นสัปดาห์
     if (i % 7 === 0) {
-      const weekD = new Date(viewStart);
-      weekD.setDate(weekD.getDate() + i);
-      const weekEnd = new Date(weekD);
-      weekEnd.setDate(weekEnd.getDate() + 6);
-      let barText = "";
-      if (weekD.getMonth() === weekEnd.getMonth()) {
-        barText = THAI_MONTHS[weekD.getMonth()] + " " + weekD.getFullYear();
-      } else {
-        barText = THAI_MONTHS[weekD.getMonth()] + " – " + THAI_MONTHS[weekEnd.getMonth()] + " " + weekEnd.getFullYear();
-      }
-      const barMonth = weekD.getMonth();
+      const weekD = new Date(viewStart); weekD.setDate(weekD.getDate()+i);
+      const weekEnd = new Date(weekD); weekEnd.setDate(weekEnd.getDate()+6);
+      let barText = weekD.getMonth() === weekEnd.getMonth()
+        ? THAI_MONTHS[weekD.getMonth()]+" "+weekD.getFullYear()
+        : THAI_MONTHS[weekD.getMonth()]+" – "+THAI_MONTHS[weekEnd.getMonth()]+" "+weekEnd.getFullYear();
       const bar = document.createElement("div");
-      bar.className = "week-month-bar " + (barMonth % 2 === 0 ? "month-even" : "month-odd");
+      bar.className = "week-month-bar "+(weekD.getMonth()%2===0?"month-even":"month-odd");
       bar.textContent = barText;
       grid.appendChild(bar);
     }
 
     const cell = document.createElement("div");
     cell.className = "cal-cell";
-    const curDate = new Date(viewStart);
-    curDate.setDate(curDate.getDate() + i);
+    cell.style.height = cellH;
+
+    const curDate = new Date(viewStart); curDate.setDate(curDate.getDate()+i);
     const dateStr = dateToStr(curDate);
     const dayNum = curDate.getDate();
-    const isOther = false;
+
+    cell.classList.add(curDate.getMonth()%2===0?"month-even":"month-odd");
+    if (dateStr === tStr) cell.classList.add("is-today");
 
     const info = eventMap[dateStr];
-    if (info && info.fairType && !isOther) {
-      cell.classList.add(info.fairType === "peak" ? "fair-peak" : "fair-normal");
-    }
+    if (info && info.fairType) cell.classList.add(info.fairType==="peak"?"fair-peak":"fair-normal");
+    if (curDate.getDate()===1) cell.classList.add("new-month-border");
 
     const numEl = document.createElement("div");
     numEl.className = "day-num";
@@ -424,13 +407,12 @@ function renderCalendar() {
     numEl.textContent = dayNum;
     cell.appendChild(numEl);
 
-
     if (info) {
       const maxShow = 3;
       info.events.slice(0, maxShow).forEach(ev => {
         const el = document.createElement("div");
         el.className = "event "+ev.cls;
-        el.textContent = ev.item && ev.item.showName ? ev.label + ": " + ev.store["Store Name"] : ev.label;
+        el.textContent = ev.item && ev.item.showName ? ev.label+": "+ev.store["Store Name"] : ev.label;
         el.title = ev.store["Store Name"];
         el.addEventListener("click", () => selectStore(ev.store));
         cell.appendChild(el);
@@ -438,10 +420,9 @@ function renderCalendar() {
       if (info.events.length > maxShow) {
         const more = document.createElement("div");
         more.className = "event-more";
-        more.textContent = "+" + (info.events.length - maxShow) + " more";
+        more.textContent = "+"+(info.events.length-maxShow)+" more";
         const allEvs = info.events;
-        const dStr = dateStr;
-        more.addEventListener("click", () => showDayPopup(dStr, allEvs));
+        more.addEventListener("click", () => showDayPopup(dateStr, allEvs));
         cell.appendChild(more);
       }
     }
@@ -453,62 +434,80 @@ function showModal(store) {
   document.getElementById("mTitle").textContent = store["Store Name"];
   document.getElementById("mSub").textContent = store["Nest Store Code"]+" · DC: "+store["DC Code"]+" · Layout: "+(store["Store Layout"]||"-");
   const schedRows = SCHEDULE_ITEMS.map(i=>`<div class="modal-row"><span class="modal-key">${i.label}</span><span class="modal-val">${store[i.key]||"-"}</span></div>`).join("");
-  const taskRows = TASK_ITEMS.map(i=>`<div class="modal-row"><span class="modal-key">${i.label}</span><span class="modal-val">${store[i.key]||"-"}</span></div>`).join("");
+  const taskRows = TASK_ITEMS.filter(i=>i.key!=="Grand Open Date").map(i=>`<div class="modal-row"><span class="modal-key">${i.label}</span><span class="modal-val">${store[i.key]||"-"}</span></div>`).join("");
   document.getElementById("mContent").innerHTML = `<div class="modal-section">Schedule</div>${schedRows}<div class="modal-section">Tasks</div>${taskRows}`;
   document.getElementById("modalBg").classList.add("show");
 }
 
-function showStoreInfo(store) {
-  const bar = document.getElementById("storeInfoBar");
-  if (!store) { bar.classList.remove("show"); return; }
-  bar.classList.add("show");
-  bar.innerHTML = `
-    <div class="info-group"><div class="info-label">ร้าน</div><div class="info-val">${store["Store Name"]}</div></div>
-    <div class="info-group"><div class="info-label">Store Code</div><div class="info-val">${store["Nest Store Code"]}</div></div>
-    <div class="info-group"><div class="info-label">คลัง (DC)</div><div class="info-val">${store["DC Code"]}</div></div>
-    <div class="info-group"><div class="info-label">วันเปิดร้าน</div><div class="info-val">${store["Grand Open Date"]}</div></div>
-    <div class="info-group"><div class="info-label">Store Layout</div><div class="info-val">${store["Store Layout"]||"-"} ตรม.</div></div>
-    <div class="info-group"><div class="info-label">รอบจัด</div><div class="info-val">${store["Replen Pick Amb"]||"-"}</div></div>
-    <div class="info-group"><div class="info-label">รอบส่ง</div><div class="info-val">${store["Replen Deli Amb"]||"-"}</div></div>
+function updateDetailPanel(store) {
+  const infoEl = document.getElementById("detailStoreInfo");
+  const tlEl = document.getElementById("detailTimeline");
+  if (!store) {
+    infoEl.innerHTML = '<div class="detail-empty">เลือกร้านเพื่อดูรายละเอียด</div>';
+    tlEl.innerHTML = "";
+    return;
+  }
+  infoEl.innerHTML = `
+    <div class="detail-store-name">${store["Store Name"]}</div>
+    <div class="detail-store-meta">${store["Nest Store Code"]} · DC: ${store["DC Code"]} · ${store["Store Layout"]||"-"} ตรม.</div>
+    <div class="detail-chips">
+      <span class="detail-chip" style="background:#1b3a2a;color:#81C784;">จัด: ${store["Replen Pick Amb"]||"-"}</span>
+      <span class="detail-chip" style="background:#2a1b3a;color:#CE93D8;">ส่ง: ${store["Replen Deli Amb"]||"-"}</span>
+    </div>
+  `;
 
+  const schedItems = SCHEDULE_ITEMS.filter(i => store[i.key]);
+  const taskItems = TASK_ITEMS.filter(i => i.key !== "Grand Open Date" && store[i.key]);
+
+  const makeRow = (item) => {
+    const d = parseDate(store[item.key]);
+    if (!d) return "";
+    const dateLabel = `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]}`;
+    return `<div class="tl-row">
+      <div class="tl-date">${dateLabel}</div>
+      <div class="tl-event ${item.cls}" onclick="showModal(allStores.find(s=>s['Nest Store Code']==='${store['Nest Store Code']}'))">${item.label}</div>
+    </div>`;
+  };
+
+  tlEl.innerHTML = `
+    <div class="tl-section">Schedule</div>
+    ${schedItems.map(makeRow).join("")}
+    <div class="tl-section">Tasks</div>
+    ${taskItems.map(makeRow).join("")}
   `;
 }
 
-function renderConfig() {
-  const all = [...SCHEDULE_ITEMS, ...TASK_ITEMS];
-  document.getElementById("configBody").innerHTML = all.map(item=>`
-    <tr>
-      <td>${item.label}</td>
-      <td><select onchange="categoryMap['${item.key}']=this.value;renderCalendar();">
-        <option value="schedule" ${categoryMap[item.key]==="schedule"?"selected":""}>Schedule</option>
-        <option value="tasks" ${categoryMap[item.key]==="tasks"?"selected":""}>Tasks</option>
-      </select></td>
-    </tr>
-  `).join("");
-}
-
 function selectStore(store) {
-  const sel = document.getElementById("storeSelect");
-  sel.value = store["Nest Store Code"];
-  showStoreInfo(store);
+  document.getElementById("storeSelect").value = store["Nest Store Code"];
+  updateDetailPanel(store);
   const openD = parseDate(store["Grand Open Date"]);
   if (openD) {
-    const weekOfOpen = getWeekStart(openD);
-    viewStart = new Date(weekOfOpen);
-    viewStart.setDate(viewStart.getDate() - 14);
+    viewStart = new Date(getWeekStart(openD));
+    viewStart.setDate(viewStart.getDate()-14);
   }
   renderCalendar();
 }
 
 function showDayPopup(dateStr, events) {
-  const parts = dateStr.split("-");
-  const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-  const label = `${d.getDate()} ${["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][d.getMonth()]} ${d.getFullYear()}`;
-  document.getElementById("dayPopupTitle").textContent = label;
+  const p = dateStr.split("-");
+  const d = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
+  document.getElementById("dayPopupTitle").textContent = `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
   document.getElementById("dayPopupContent").innerHTML = events.map(ev =>
-    `<div class="event ${ev.cls}" style="margin-bottom:4px;cursor:pointer" onclick="selectStore(allStores.find(s=>s['Nest Store Code']==='${ev.store['Nest Store Code']}'));document.getElementById('dayPopupBg').classList.remove('show');">${ev.item && ev.item.showName ? ev.label+': '+ev.store['Store Name'] : ev.label+' — '+ev.store['Store Name']}</div>`
+    `<div class="event ${ev.cls}" style="margin-bottom:4px;cursor:pointer" onclick="selectStore(allStores.find(s=>s['Nest Store Code']==='${ev.store['Nest Store Code']}'));document.getElementById('dayPopupBg').classList.remove('show');">${ev.item&&ev.item.showName?ev.label+': '+ev.store['Store Name']:ev.label+' — '+ev.store['Store Name']}</div>`
   ).join("");
   document.getElementById("dayPopupBg").classList.add("show");
+}
+
+function renderConfig() {
+  const all = [...SCHEDULE_ITEMS, ...TASK_ITEMS.filter(i=>i.key!=="Grand Open Date")];
+  document.getElementById("configBody").innerHTML = all.map(item=>`
+    <tr><td>${item.label}</td><td>
+      <select onchange="categoryMap['${item.key}']=this.value;renderCalendar();">
+        <option value="schedule" ${categoryMap[item.key]==="schedule"?"selected":""}>Schedule</option>
+        <option value="tasks" ${categoryMap[item.key]==="tasks"?"selected":""}>Tasks</option>
+      </select>
+    </td></tr>
+  `).join("");
 }
 
 async function loadData() {
@@ -516,19 +515,13 @@ async function loadData() {
     const res = await fetch(CSV_URL+"&t="+Date.now());
     const text = await res.text();
     allStores = parseCSV(text).filter(s=>s["Store Name"]);
-
     const storeSel = document.getElementById("storeSelect");
-  
-
     allStores.forEach(s => {
       const opt = document.createElement("option");
       opt.value = s["Nest Store Code"];
       opt.textContent = s["Nest Store Code"]+" - "+s["Store Name"];
       storeSel.appendChild(opt);
     });
-
-
-
     renderCalendar();
     renderConfig();
   } catch(e) {
@@ -539,35 +532,32 @@ async function loadData() {
 document.getElementById("prevMonth").addEventListener("click", ()=>{ viewStart.setDate(viewStart.getDate()-7); renderCalendar(); });
 document.getElementById("nextMonth").addEventListener("click", ()=>{ viewStart.setDate(viewStart.getDate()+7); renderCalendar(); });
 
-// scroll mouse เลื่อนทีละ 1 สัปดาห์
 let scrollCooldown = false;
 document.addEventListener("wheel", (e) => {
   e.preventDefault();
   if (scrollCooldown) return;
   scrollCooldown = true;
-  setTimeout(() => scrollCooldown = false, 300);
-  if (e.deltaY > 0) {
-    viewStart.setDate(viewStart.getDate() + 7);
-  } else {
-    viewStart.setDate(viewStart.getDate() - 7);
-  }
+  setTimeout(()=>scrollCooldown=false, 300);
+  viewStart.setDate(viewStart.getDate()+(e.deltaY>0?7:-7));
   renderCalendar();
 }, { passive: false });
+
 document.getElementById("storeSelect").addEventListener("change", function(){
   const store = allStores.find(s=>s["Nest Store Code"]===this.value)||null;
-  showStoreInfo(store);
+  updateDetailPanel(store);
   if (store && store["Grand Open Date"]) {
     const openD = parseDate(store["Grand Open Date"]);
-    if (openD) {
-      // เลื่อน viewStart ให้วันเปิดอยู่สัปดาห์กลาง (สัปดาห์ที่ 3 จาก 5 = offset -14 วัน)
-      const weekOfOpen = getWeekStart(openD);
-      viewStart = new Date(weekOfOpen);
-      viewStart.setDate(viewStart.getDate() - 14);
-    }
+    if (openD) { viewStart = new Date(getWeekStart(openD)); viewStart.setDate(viewStart.getDate()-14); }
   }
   renderCalendar();
 });
 
+document.getElementById("resetBtn").addEventListener("click", ()=>{
+  document.getElementById("storeSelect").value = "";
+  updateDetailPanel(null);
+  viewStart = getWeekStart(today);
+  renderCalendar();
+});
 
 document.querySelectorAll(".tab-btn").forEach(btn=>{
   btn.addEventListener("click", function(){
@@ -579,19 +569,13 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
       document.getElementById("configView").style.display="block";
     } else {
       currentTab=tab;
-      document.getElementById("calView").style.display="block";
+      document.getElementById("calView").style.display="flex";
       document.getElementById("configView").style.display="none";
       renderCalendar();
     }
   });
 });
 
-document.getElementById("resetBtn").addEventListener("click", () => {
-  document.getElementById("storeSelect").value = "";
-  showStoreInfo(null);
-  viewStart = getWeekStart(today);
-  renderCalendar();
-});
 document.getElementById("dayPopupClose").addEventListener("click",()=>document.getElementById("dayPopupBg").classList.remove("show"));
 document.getElementById("dayPopupBg").addEventListener("click",e=>{ if(e.target===document.getElementById("dayPopupBg")) document.getElementById("dayPopupBg").classList.remove("show"); });
 document.getElementById("modalClose").addEventListener("click",()=>document.getElementById("modalBg").classList.remove("show"));
