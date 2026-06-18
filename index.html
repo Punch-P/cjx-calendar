@@ -80,7 +80,16 @@ body { font-family: 'Sarabun', sans-serif; background: #f0f2f5; color: #2c2c2c; 
 .color-task         { background: #FFF9C4; color: #E65100; border: 1px solid #FFE082; }
 
 .loading { text-align: center; padding: 50px; color: #aaa; font-size: 14px; }
-.event-more { font-size: 12px; color: #888; padding: 1px 4px; cursor: default; }
+.event-more { font-size: 12px; color: #5c6bc0; padding: 1px 4px; cursor: pointer; font-weight: 500; }
+.cal-cell.is-today { background: #f0f4ff; }
+.reset-btn { padding: 6px 14px; border: 1px solid #e53935; border-radius: 6px; background: white; cursor: pointer; font-size: 13px; font-family: 'Sarabun', sans-serif; color: #e53935; }
+.reset-btn:hover { background: #fff5f5; }
+.event-more:hover { text-decoration: underline; }
+.day-popup-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 300; align-items: center; justify-content: center; }
+.day-popup-bg.show { display: flex; }
+.day-popup { background: white; border-radius: 10px; padding: 16px; min-width: 240px; max-width: 320px; max-height: 70vh; overflow-y: auto; }
+.day-popup-title { font-size: 14px; font-weight: 500; margin-bottom: 10px; color: #1a1a2e; }
+.day-popup-close { float: right; background: none; border: none; font-size: 18px; cursor: pointer; color: #aaa; margin-top: -4px; }
 
 .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; align-items: center; justify-content: center; }
 .modal-bg.show { display: flex; }
@@ -117,6 +126,7 @@ body { font-family: 'Sarabun', sans-serif; background: #f0f2f5; color: #2c2c2c; 
     <option value="">-- ทุกร้าน --</option>
   </select>
 
+  <button class="reset-btn" id="resetBtn">↺ Reset</button>
   <div class="view-tabs">
     <button class="tab-btn active" data-tab="all">Overall</button>
     <button class="tab-btn" data-tab="schedule">Schedule</button>
@@ -184,6 +194,14 @@ body { font-family: 'Sarabun', sans-serif; background: #f0f2f5; color: #2c2c2c; 
   </div>
 </div>
 
+<div class="day-popup-bg" id="dayPopupBg">
+  <div class="day-popup">
+    <button class="day-popup-close" id="dayPopupClose">×</button>
+    <div class="day-popup-title" id="dayPopupTitle"></div>
+    <div id="dayPopupContent"></div>
+  </div>
+</div>
+
 <div class="modal-bg" id="modalBg">
   <div class="modal">
     <div class="modal-head">
@@ -246,7 +264,7 @@ const SCHEDULE_ITEMS = [
   { key: "Pro Delivery (D-2)",         label: "ส่ง Pro",         cls: "color-pro-del" },
   { key: "PickDate_Chilled",           label: "จัด Chilled",     cls: "color-chill-pick" },
   { key: "Chill Delivery (D-1)",       label: "ส่ง Chilled",     cls: "color-chill-del" },
-  { key: "Grand Open Date",            label: "เปิดร้าน",        cls: "color-open" },
+  { key: "Grand Open Date",            label: "เปิดร้าน",        cls: "color-open", showName: true },
 ];
 
 const TASK_ITEMS = [
@@ -256,7 +274,7 @@ const TASK_ITEMS = [
   { key: "Last Order HB Sell",         label: "Last Order HB",       cls: "color-task" },
   { key: "Set Parameter (D-2)",        label: "Set Parameter",       cls: "color-task" },
   { key: "Reassign TB2 (D+8)",         label: "Reassign TB2",        cls: "color-task" },
-  { key: "Grand Open Date",            label: "เปิดร้าน",            cls: "color-open" },
+  { key: "Grand Open Date",            label: "เปิดร้าน",            cls: "color-open", showName: true },
 ];
 
 const categoryMap = {};
@@ -325,7 +343,7 @@ function buildEventMap(stores) {
       if (seenKeys.has(dedupKey)) return;
       seenKeys.add(dedupKey);
       if (!map[k]) map[k] = { events:[], fairType:null };
-      map[k].events.push({ label: item.label, cls: item.cls, store });
+      map[k].events.push({ label: item.label, cls: item.cls, store, item });
     });
   });
   return map;
@@ -380,15 +398,18 @@ function renderCalendar() {
       info.events.slice(0, maxShow).forEach(ev => {
         const el = document.createElement("div");
         el.className = "event "+ev.cls;
-        el.textContent = ev.label;
+        el.textContent = ev.item && ev.item.showName ? ev.label + ": " + ev.store["Store Name"] : ev.label;
         el.title = ev.store["Store Name"];
-        el.addEventListener("click", () => showModal(ev.store));
+        el.addEventListener("click", () => selectStore(ev.store));
         cell.appendChild(el);
       });
       if (info.events.length > maxShow) {
         const more = document.createElement("div");
         more.className = "event-more";
         more.textContent = "+" + (info.events.length - maxShow) + " more";
+        const allEvs = info.events;
+        const dStr = dateStr;
+        more.addEventListener("click", () => showDayPopup(dStr, allEvs));
         cell.appendChild(more);
       }
     }
@@ -432,6 +453,30 @@ function renderConfig() {
       </select></td>
     </tr>
   `).join("");
+}
+
+function selectStore(store) {
+  const sel = document.getElementById("storeSelect");
+  sel.value = store["Nest Store Code"];
+  showStoreInfo(store);
+  const openD = parseDate(store["Grand Open Date"]);
+  if (openD) {
+    const weekOfOpen = getWeekStart(openD);
+    viewStart = new Date(weekOfOpen);
+    viewStart.setDate(viewStart.getDate() - 14);
+  }
+  renderCalendar();
+}
+
+function showDayPopup(dateStr, events) {
+  const parts = dateStr.split("-");
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+  const label = `${d.getDate()} ${["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][d.getMonth()]} ${d.getFullYear()}`;
+  document.getElementById("dayPopupTitle").textContent = label;
+  document.getElementById("dayPopupContent").innerHTML = events.map(ev =>
+    `<div class="event ${ev.cls}" style="margin-bottom:4px;cursor:pointer" onclick="showModal(allStores.find(s=>s['Nest Store Code']==='${ev.store['Nest Store Code']}'))">${ev.label} — ${ev.store["Store Name"]}</div>`
+  ).join("");
+  document.getElementById("dayPopupBg").classList.add("show");
 }
 
 async function loadData() {
@@ -509,6 +554,14 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
   });
 });
 
+document.getElementById("resetBtn").addEventListener("click", () => {
+  document.getElementById("storeSelect").value = "";
+  showStoreInfo(null);
+  viewStart = getWeekStart(today);
+  renderCalendar();
+});
+document.getElementById("dayPopupClose").addEventListener("click",()=>document.getElementById("dayPopupBg").classList.remove("show"));
+document.getElementById("dayPopupBg").addEventListener("click",e=>{ if(e.target===document.getElementById("dayPopupBg")) document.getElementById("dayPopupBg").classList.remove("show"); });
 document.getElementById("modalClose").addEventListener("click",()=>document.getElementById("modalBg").classList.remove("show"));
 document.getElementById("modalBg").addEventListener("click",e=>{ if(e.target===document.getElementById("modalBg")) document.getElementById("modalBg").classList.remove("show"); });
 
