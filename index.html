@@ -115,6 +115,8 @@ body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; fon
 .color-chill-del    { background: #121e00; color: #DCEDC8; border-left: 2px solid #AED581; }
 .color-open         { background: #37474F; color: #FFFFFF; }
 .color-task         { background: #E3F2FD; color: #0D47A1; border: 1px solid #90CAF9; }
+.color-task-lo      { background: #F3E5F5; color: #6A1B9A; border: 1px solid #CE93D8; }
+.tl-event-tasklo    { background: #1a0d2a; color: #CE93D8; border-left: 3px solid #AB47BC; border-radius: 3px; padding: 3px 8px; font-size: 12px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 
 .loading { text-align: center; padding: 50px; color: #444; font-size: 14px; }
 
@@ -301,6 +303,13 @@ const TASK_ITEMS = [
   { key: "Set Parameter (D-2)",        label: "Set Parameter",       cls: "color-task" },
   { key: "Reassign TB2 (D+8)",         label: "Reassign TB2",        cls: "color-task" },
   { key: "Grand Open Date",            label: "เปิดร้าน",            cls: "color-open", showName: true },
+  { key: "_lastorder_food",            label: "Last Order Food",     cls: "color-task", lastOrderFrom: "PickDate_Food" },
+  { key: "_lastorder_store",           label: "Last Order Store Use",cls: "color-task", lastOrderFrom: "PickDate_Store Use" },
+  { key: "_lastorder_bao",             label: "Last Order Bao Café", cls: "color-task", lastOrderFrom: "PickDate_Bao Café" },
+  { key: "_lastorder_nonfood",         label: "Last Order Non Food", cls: "color-task", lastOrderFrom: "PickDate_Non Food" },
+  { key: "_lastorder_life",            label: "Last Order Life Style",cls: "color-task", lastOrderFrom: "PickDate_Life Style" },
+  { key: "_lastorder_pro",             label: "Last Order Pro",      cls: "color-task", lastOrderFrom: "PickDate_สินค้ารอบเก็บตก" },
+  { key: "_lastorder_chilled",         label: "Last Order Chilled",  cls: "color-task", lastOrderFrom: "PickDate_Chilled" },
 ];
 
 const categoryMap = {};
@@ -332,7 +341,8 @@ function getFilteredStores() {
 function getActiveItems() {
   if (currentTab === "schedule") return SCHEDULE_ITEMS;
   if (currentTab === "tasks") return TASK_ITEMS;
-  return [...SCHEDULE_ITEMS, ...TASK_ITEMS];
+  // overall: ไม่แสดง last order items (_lastorder_*)
+  return [...SCHEDULE_ITEMS, ...TASK_ITEMS.filter(i => !i.lastOrderFrom)];
 }
 
 function buildEventMap(stores) {
@@ -355,7 +365,15 @@ function buildEventMap(stores) {
     }
     const seenKeys = new Set();
     getActiveItems().forEach(item => {
-      const d = parseDate(store[item.key]);
+      let d;
+      if (item.lastOrderFrom) {
+        // Last Order = PickDate - 1 วัน
+        const pickD = parseDate(store[item.lastOrderFrom]);
+        if (!pickD) return;
+        d = new Date(pickD); d.setDate(d.getDate() - 1);
+      } else {
+        d = parseDate(store[item.key]);
+      }
       if (!d) return;
       const k = dateToStr(d);
       const dedupKey = k+"_"+item.key+"_"+(store["Nest Store Code"]||"");
