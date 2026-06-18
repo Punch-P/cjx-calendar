@@ -161,6 +161,9 @@ body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; fon
   <select id="storeSelect" style="width:260px">
     <option value="">-- ทุกร้าน --</option>
   </select>
+  <select id="filterDate" style="min-width:180px;">
+    <option value="">วันเปิดร้าน: ทั้งหมด</option>
+  </select>
   <button class="reset-btn" id="resetBtn">↺ Reset</button>
   <div class="view-tabs">
     <button class="tab-btn active" data-tab="all">Overall</button>
@@ -171,16 +174,17 @@ body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; fon
 </div>
 
 <div class="legend">
-  <div class="legend-item"><div class="legend-dot" style="background:#0D2137;border:1px solid #64B5F6"></div>Food</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#0D2110;border:1px solid #81C784"></div>Store Use</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#1a0d2a;border:1px solid #CE93D8"></div>Bao Café</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#2a1800;border:1px solid #FFB74D"></div>Non Food</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#002a2a;border:1px solid #4DD0E1"></div>Life Style</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#2a0a1a;border:1px solid #F48FB1"></div>Pro</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#1a2a00;border:1px solid #AED581"></div>Chilled</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#263238"></div>เปิดร้าน</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#2a2200;border:1px solid #5a4a00"></div>Tasks</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#1a1000;border:1px solid #3a2800"></div>Grand Fair</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#BBDEFB"></div>Food</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#C8E6C9"></div>Store Use</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#E1BEE7"></div>Bao Café</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#FFE0B2"></div>Non Food</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#B2EBF2"></div>Life Style</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#F8BBD0"></div>เก็บตก</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#DCEDC8"></div>Chilled</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#37474F"></div>เปิดร้าน</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#FFF9C4;border:1px solid #FFE082"></div>Tasks</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#C8E6C9;border:1px solid #81C784"></div>Grand Fair Peak</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#E8F5E9;border:1px solid #C8E6C9"></div>Grand Fair Normal</div>
 </div>
 
 <div class="store-count" id="storeCount"></div>
@@ -347,14 +351,19 @@ function parseCSV(text) {
 
 function getFilteredStores() {
   const storeVal = document.getElementById("storeSelect").value;
-  return allStores.filter(s => !storeVal || s["Nest Store Code"] === storeVal);
+  const dateVal = document.getElementById("filterDate").value;
+  return allStores.filter(s => {
+    if (storeVal && s["Nest Store Code"] !== storeVal) return false;
+    if (dateVal && s["Grand Open Date"] !== dateVal) return false;
+    return true;
+  });
 }
 
 function getActiveItems() {
   if (currentTab === "schedule") return SCHEDULE_ITEMS;
   if (currentTab === "tasks") return TASK_ITEMS;
-  // overall: ไม่แสดง last order items (_lastorder_*)
-  return [...SCHEDULE_ITEMS, ...TASK_ITEMS.filter(i => !i.lastOrderFrom)];
+  // overall: แสดงแค่ เปิดร้าน
+  return SCHEDULE_ITEMS.filter(i => i.showName);
 }
 
 function buildEventMap(stores) {
@@ -621,18 +630,22 @@ function updateDetailPanel(store) {
     `;
   }
 
-  // accordion single store
+  // accordion single store — ยุบก่อน กดค่อยขยาย
+  const storeCode = store["Nest Store Code"];
   tlEl.innerHTML = `
     <div style="margin-bottom:4px;">
-      <div class="store-tab-header" onclick="toggleStoreTab(this)">
+      <div class="store-tab-header" onclick="toggleStoreTab(this)" data-store="${storeCode}">
         <span class="tab-name">${store["Store Name"]}</span>
-        <span style="font-size:10px;color:#555;">▶</span>
+        <span style="font-size:10px;color:#777;">▶</span>
       </div>
-      <div class="store-tab-body">
-        ${makeStoreDetailHTML(store)}
-      </div>
+      <div class="store-tab-body" id="body_${storeCode}"></div>
     </div>
   `;
+  // lazy load detail เมื่อกด
+  document.querySelector(`[data-store="${storeCode}"]`).addEventListener("click", function() {
+    const body = this.nextElementSibling;
+    if (!body.innerHTML) body.innerHTML = makeStoreDetailHTML(store);
+  }, { once: false });
 }
 
 function selectStore(store) {
@@ -737,20 +750,12 @@ function openMultiStorePanel(storeCodes, taskLabel) {
       return `<div class="tab-row"><div class="tab-date">${fmt(d)}</div><div class="tab-event ${item.cls}">${item.label}</div></div>`;
     };
 
-    return `
-      <div style="margin-bottom:4px;">
+    return `<div style="margin-bottom:4px;" data-code="${store["Nest Store Code"]}">
         <div class="store-tab-header" onclick="toggleStoreTab(this)">
           <span class="tab-name">${store["Store Name"]}</span>
-          <span style="font-size:10px;color:#555;">▼</span>
+          <span style="font-size:10px;color:#777;">▶</span>
         </div>
-        <div class="store-tab-body">
-          <div class="tab-store-meta">${store["Nest Store Code"]} · DC: ${store["DC Code"]} · ${store["Store Layout"]||"-"} ตรม.</div>
-          ${openD2 ? `<div class="tab-store-meta" style="color:#90CAF9;">วันเปิด: ${fmt(openD2)} &nbsp;·&nbsp; Fair: ${fmt(openD2)}–${fmt(fairEnd)}</div>` : ""}
-          <div class="tab-section">Schedule</div>
-          ${schedItems.map(i => makeTabRow(i)).join("")}
-          <div class="tab-section">Tasks</div>
-          ${taskItems.map(i => makeTabRow(i)).join("")}
-        </div>
+        <div class="store-tab-body"></div>
       </div>`;
   }).join("");
 
@@ -758,6 +763,18 @@ function openMultiStorePanel(storeCodes, taskLabel) {
   tabsEl.className = "store-tabs";
   tabsEl.innerHTML = tabsHtml;
   tlEl.appendChild(tabsEl);
+
+  // lazy load เมื่อกด
+  tabsEl.querySelectorAll(".store-tab-header").forEach(header => {
+    header.addEventListener("click", function() {
+      const body = this.nextElementSibling;
+      const code = this.closest("[data-code]").dataset.code;
+      if (!body.innerHTML) {
+        const st = allStores.find(s => s["Nest Store Code"] === code);
+        if (st) body.innerHTML = makeStoreDetailHTML(st);
+      }
+    });
+  });
 
   renderCalendar();
 }
@@ -877,6 +894,23 @@ async function loadData() {
       storeSel.appendChild(opt);
     });
     await loadTaskDone();
+
+    // populate filter วันที่เปิดร้าน
+    const dateSel = document.getElementById("filterDate");
+    const openDates = {};
+    allStores.forEach(s => {
+      const d = s["Grand Open Date"];
+      if (d) openDates[d] = (openDates[d]||0) + 1;
+    });
+    Object.keys(openDates).sort().forEach(d => {
+      const opt = document.createElement("option");
+      opt.value = d;
+      const pd = parseDate(d);
+      const label = pd ? `${pd.getDate()} ${THAI_MONTHS_SHORT[pd.getMonth()]} (${openDates[d]} ร้าน)` : d;
+      opt.textContent = label;
+      dateSel.appendChild(opt);
+    });
+
     renderCalendar();
     renderConfig();
   } catch(e) {
@@ -909,8 +943,18 @@ document.getElementById("storeSelect").addEventListener("change", function(){
 
 document.getElementById("resetBtn").addEventListener("click", ()=>{
   document.getElementById("storeSelect").value = "";
+  document.getElementById("filterDate").value = "";
   updateDetailPanel(null);
   viewStart = getWeekStart(today);
+  renderCalendar();
+});
+
+document.getElementById("filterDate").addEventListener("change", function() {
+  const d = parseDate(this.value);
+  if (d) {
+    viewStart = new Date(getWeekStart(d));
+    viewStart.setDate(viewStart.getDate() - 7);
+  }
   renderCalendar();
 });
 
