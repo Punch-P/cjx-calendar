@@ -406,7 +406,7 @@ function showStoreInfo(store) {
   bar.innerHTML = `
     <div class="info-group"><div class="info-label">ร้าน</div><div class="info-val">${store["Store Name"]}</div></div>
     <div class="info-group"><div class="info-label">Store Code</div><div class="info-val">${store["Nest Store Code"]}</div></div>
-    <div class="info-group"><div class="info-label">DC</div><div class="info-val">${store["DC Code"]}</div></div>
+    <div class="info-group"><div class="info-label">คลัง (DC)</div><div class="info-val">${store["DC Code"]}</div></div>
     <div class="info-group"><div class="info-label">วันเปิดร้าน</div><div class="info-val">${store["Grand Open Date"]}</div></div>
     <div class="info-group"><div class="info-label">Store Layout</div><div class="info-val">${store["Store Layout"]||"-"} ตรม.</div></div>
     <div class="info-group"><div class="info-label">รอบจัด</div><div class="info-val">${store["Replen Pick Amb"]||"-"}</div></div>
@@ -463,7 +463,7 @@ document.getElementById("nextMonth").addEventListener("click", ()=>{ viewStart.s
 
 // scroll mouse เลื่อนทีละ 1 สัปดาห์
 let scrollCooldown = false;
-document.getElementById("calView").addEventListener("wheel", (e) => {
+document.addEventListener("wheel", (e) => {
   e.preventDefault();
   if (scrollCooldown) return;
   scrollCooldown = true;
@@ -475,7 +475,20 @@ document.getElementById("calView").addEventListener("wheel", (e) => {
   }
   renderCalendar();
 }, { passive: false });
-document.getElementById("storeSelect").addEventListener("change", function(){ showStoreInfo(allStores.find(s=>s["Nest Store Code"]===this.value)||null); renderCalendar(); });
+document.getElementById("storeSelect").addEventListener("change", function(){
+  const store = allStores.find(s=>s["Nest Store Code"]===this.value)||null;
+  showStoreInfo(store);
+  if (store && store["Grand Open Date"]) {
+    const openD = parseDate(store["Grand Open Date"]);
+    if (openD) {
+      // เลื่อน viewStart ให้วันเปิดอยู่สัปดาห์กลาง (สัปดาห์ที่ 3 จาก 5 = offset -14 วัน)
+      const weekOfOpen = getWeekStart(openD);
+      viewStart = new Date(weekOfOpen);
+      viewStart.setDate(viewStart.getDate() - 14);
+    }
+  }
+  renderCalendar();
+});
 document.getElementById("filterDC").addEventListener("change", renderCalendar);
 
 document.querySelectorAll(".tab-btn").forEach(btn=>{
