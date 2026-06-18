@@ -635,11 +635,11 @@ function updateDetailPanel(store) {
   // accordion single store
   tlEl.innerHTML = `
     <div style="margin-bottom:4px;">
-      <div class="store-tab-header active" onclick="toggleStoreTab(this)">
+      <div class="store-tab-header" onclick="toggleStoreTab(this)">
         <span class="tab-name">${store["Store Name"]}</span>
-        <span style="font-size:10px;color:#555;">▼</span>
+        <span style="font-size:10px;color:#555;">▶</span>
       </div>
-      <div class="store-tab-body show">
+      <div class="store-tab-body">
         ${makeStoreDetailHTML(store)}
       </div>
     </div>
@@ -775,8 +775,11 @@ function openMultiStorePanel(storeCodes, taskLabel) {
 
 function toggleStoreTab(header) {
   const body = header.nextElementSibling;
+  const isOpen = body.classList.contains("show");
   body.classList.toggle("show");
   header.classList.toggle("active");
+  const arrow = header.querySelector("span:last-child");
+  if (arrow) arrow.textContent = isOpen ? "▶" : "▼";
 }
 
 function renderConfig() {
@@ -936,13 +939,9 @@ document.getElementById("resetBtn").addEventListener("click", ()=>{
 
 document.querySelectorAll(".tab-btn").forEach(btn=>{
   btn.addEventListener("click", function(){
-    const tab = this.dataset.tab;
-    if (tab === "tasks" && !currentUser) {
-      document.getElementById("userPopupBg").classList.add("show");
-      return;
-    }
     document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
     this.classList.add("active");
+    const tab = this.dataset.tab;
     if (tab==="config") {
       document.getElementById("calView").style.display="none";
       document.getElementById("configView").style.display="block";
