@@ -317,10 +317,14 @@ function buildEventMap(stores) {
       }
     }
 
+    const seenKeys = new Set();
     getActiveItems().forEach(item => {
-      const d = parseDate(store[item.key]);  // ใช้ parseDate แก้ bug timezone
+      const d = parseDate(store[item.key]);
       if (!d) return;
       const k = dateToStr(d);
+      const dedupKey = k + "_" + item.key + "_" + (store["Nest Store Code"]||"");
+      if (seenKeys.has(dedupKey)) return;
+      seenKeys.add(dedupKey);
       if (!map[k]) map[k] = { events:[], fairType:null };
       map[k].events.push({ label: item.label, cls: item.cls, store });
     });
