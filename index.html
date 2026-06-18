@@ -85,6 +85,8 @@ body { font-family: 'Sarabun', sans-serif; background: #f0f2f5; color: #2c2c2c; 
 .day-num.today { background: #f57c00 !important; color: white !important; font-weight: 700 !important; }
 .month-label-cell { font-size: 10px; font-weight: 500; color: #5c6bc0; background: #f0f4ff; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; display: block; }
 .new-month-border { border-left: 2px solid #5c6bc0 !important; }
+.week-row { display: contents; }
+.week-month-bar { grid-column: 1 / -1; background: #f0f4ff; border-bottom: 1px solid #dde3f5; padding: 3px 10px; font-size: 12px; font-weight: 500; color: #3949ab; }
 .reset-btn { padding: 6px 14px; border: 1px solid #e53935; border-radius: 6px; background: white; cursor: pointer; font-size: 13px; font-family: 'Sarabun', sans-serif; color: #e53935; }
 .reset-btn:hover { background: #fff5f5; }
 .event-more:hover { text-decoration: underline; }
@@ -374,6 +376,24 @@ function renderCalendar() {
   document.getElementById("storeCount").textContent = `แสดง ${stores.length} ร้านที่ยังไม่เปิด`;
 
   for (let i = 0; i < totalCells; i++) {
+    // ใส่ month bar ทุกต้นสัปดาห์
+    if (i % 7 === 0) {
+      const weekD = new Date(viewStart);
+      weekD.setDate(weekD.getDate() + i);
+      const weekEnd = new Date(weekD);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      let barText = "";
+      if (weekD.getMonth() === weekEnd.getMonth()) {
+        barText = THAI_MONTHS[weekD.getMonth()] + " " + weekD.getFullYear();
+      } else {
+        barText = THAI_MONTHS[weekD.getMonth()] + " – " + THAI_MONTHS[weekEnd.getMonth()] + " " + weekEnd.getFullYear();
+      }
+      const bar = document.createElement("div");
+      bar.className = "week-month-bar";
+      bar.textContent = barText;
+      grid.appendChild(bar);
+    }
+
     const cell = document.createElement("div");
     cell.className = "cal-cell";
     const curDate = new Date(viewStart);
