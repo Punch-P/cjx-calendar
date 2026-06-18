@@ -79,8 +79,8 @@ body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; fon
 
 .month-even { background: #ffffff; }
 .month-odd  { background: #f5f5f5; }
-.cal-cell.fair-peak  { background: #1b3a1b !important; }
-.cal-cell.fair-normal { background: #162a16 !important; }
+.cal-cell.fair-peak  { background: #2E7D32 !important; }
+.cal-cell.fair-normal { background: #81C784 !important; }
 .cal-cell.is-today   { background: #fff5f5 !important; outline: 2px solid #e53935; outline-offset: -2px; }
 
 .week-month-bar { display: none; }
@@ -540,18 +540,73 @@ function showModal(store) {
   document.getElementById("modalBg").classList.add("show");
 }
 
+function makeStoreDetailHTML(store) {
+  const openD2 = parseDate(store["Grand Open Date"]);
+  const fairEnd = openD2 ? new Date(openD2) : null;
+  if (fairEnd) fairEnd.setDate(fairEnd.getDate() + 13);
+  const fmt = (d) => `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]}`;
+
+  const schedItems = SCHEDULE_ITEMS.filter(i => store[i.key]);
+  const taskItems = TASK_ITEMS.filter(i => {
+    if (i.lastOrderFrom) return !!store[i.lastOrderFrom];
+    if (i.key === "Grand Open Date") return false;
+    return !!store[i.key];
+  });
+
+  const makeRow = (item, isTask=false) => {
+    let d;
+    if (item.lastOrderFrom) {
+      const pd = parseDate(store[item.lastOrderFrom]);
+      if (!pd) return "";
+      d = new Date(pd); d.setDate(d.getDate()-1);
+    } else {
+      d = parseDate(store[item.key]);
+    }
+    if (!d) return "";
+    const dateLabel = `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]}`;
+    const isTaskItem = item.lastOrderFrom || isTask;
+    const taskCol = TASK_COL_MAP[item.label];
+    const doneBy = taskCol && taskDoneMap[store["Nest Store Code"]] ? taskDoneMap[store["Nest Store Code"]][taskCol] : "";
+    const isDone = !!doneBy;
+
+    if (isTaskItem && currentUser && taskCol) {
+      const cls = isDone ? "tl-event-task done" : "tl-event-task pending";
+      return `<div class="task-checkbox-row">
+        <input type="checkbox" class="task-cb" ${isDone?"checked":""} onchange="toggleTaskDone('${store["Nest Store Code"]}','${item.label}',this)">
+        <div class="${cls}">${item.label}${isDone?` <span class="task-done-by">(${doneBy})</span>`:""}</div>
+      </div>`;
+    }
+    const cls = isTaskItem ? "tl-event-task" : `tl-event ${item.cls}`;
+    return `<div class="tl-row"><div class="tl-date">${dateLabel}</div><div class="${cls}">${item.label}</div></div>`;
+  };
+
+  return `
+    <div class="tab-store-meta">${store["Nest Store Code"]} · DC: ${store["DC Code"]} · ${store["Store Layout"]||"-"} ตรม.</div>
+    <div class="tab-store-meta" style="color:#888;">จัด: ${store["Replen Pick Amb"]||"-"} &nbsp;·&nbsp; ส่ง: ${store["Replen Deli Amb"]||"-"}</div>
+    ${openD2 ? `<div class="tab-store-meta" style="color:#90CAF9;">วันเปิด: ${fmt(openD2)} &nbsp;·&nbsp; Fair: ${fmt(openD2)}–${fmt(fairEnd)}</div>` : ""}
+    <div class="tab-section">Schedule</div>
+    ${schedItems.map(i=>makeRow(i,false)).join("")}
+    <div class="tab-section">Tasks</div>
+    ${taskItems.map(i=>makeRow(i,true)).join("")}
+  `;
+}
+
 function updateDetailPanel(store) {
   const infoEl = document.getElementById("detailStoreInfo");
   const tlEl = document.getElementById("detailTimeline");
+  document.getElementById("detailFair").innerHTML = "";
+  const extraEl = document.getElementById("storeInfoExtra");
+  if (extraEl) extraEl.innerHTML = "";
+
   if (!store) {
     infoEl.innerHTML = '<div class="detail-empty">เลือกร้านเพื่อดูรายละเอียด</div>';
     tlEl.innerHTML = "";
     return;
   }
+
+  // store info header
   infoEl.innerHTML = `
     <div class="detail-store-name">${store["Store Name"]}</div>
-    <div class="detail-store-meta">${store["Nest Store Code"]} · DC: ${store["DC Code"]}</div>
-    <div class="detail-store-meta" style="margin-top:-4px;">Layout: ${store["Store Layout"]||"-"} ตรม.</div>
     <div class="detail-chips" style="margin-top:8px;">
       <span class="detail-chip" style="background:#1b3a2a;color:#81C784;">จัด: ${store["Replen Pick Amb"]||"-"}</span>
       <span class="detail-chip" style="background:#2a1b3a;color:#CE93D8;">ส่ง: ${store["Replen Deli Amb"]||"-"}</span>
@@ -559,26 +614,13 @@ function updateDetailPanel(store) {
     <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px; display:flex; flex-direction:column; gap:4px;" id="storeInfoExtra"></div>
   `;
 
-  const schedItems = SCHEDULE_ITEMS.filter(i => store[i.key]);
-  const taskItems = TASK_ITEMS.filter(i => i.key !== "Grand Open Date" && store[i.key]);
-
-  const makeRow = (item) => {
-    const d = parseDate(store[item.key]);
-    if (!d) return "";
-    const dateLabel = `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]}`;
-    return `<div class="tl-row">
-      <div class="tl-date">${dateLabel}</div>
-      <div class="tl-event ${item.cls}" onclick="showModal(allStores.find(s=>s['Nest Store Code']==='${store['Nest Store Code']}'))">${item.label}</div>
-    </div>`;
-  };
-
-  // ใส่วันเปิดร้าน + ช่วง Fair ใน storeInfoExtra
-  const extraEl = document.getElementById("storeInfoExtra");
+  // fair info
+  const extraEl2 = document.getElementById("storeInfoExtra");
   const openD2 = parseDate(store["Grand Open Date"]);
-  if (openD2 && extraEl) {
+  if (openD2 && extraEl2) {
     const fairEnd = new Date(openD2); fairEnd.setDate(fairEnd.getDate() + 13);
     const fmt = (d) => `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]}`;
-    extraEl.innerHTML = `
+    extraEl2.innerHTML = `
       <div style="display:flex;justify-content:space-between;font-size:13px;">
         <span style="color:#888;">วันเปิดร้าน</span>
         <span style="color:#90CAF9;font-weight:500;">${store["Grand Open Date"]}</span>
@@ -590,11 +632,17 @@ function updateDetailPanel(store) {
     `;
   }
 
+  // accordion single store
   tlEl.innerHTML = `
-    <div class="tl-section">Schedule</div>
-    ${schedItems.map(makeRow).join("")}
-    <div class="tl-section">Tasks</div>
-    ${taskItems.map(i=>makeRow(i,true)).join("")}
+    <div style="margin-bottom:4px;">
+      <div class="store-tab-header active" onclick="toggleStoreTab(this)">
+        <span class="tab-name">${store["Store Name"]}</span>
+        <span style="font-size:10px;color:#555;">▼</span>
+      </div>
+      <div class="store-tab-body show">
+        ${makeStoreDetailHTML(store)}
+      </div>
+    </div>
   `;
 }
 
