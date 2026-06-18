@@ -81,7 +81,10 @@ body { font-family: 'Sarabun', sans-serif; background: #f0f2f5; color: #2c2c2c; 
 
 .loading { text-align: center; padding: 50px; color: #aaa; font-size: 14px; }
 .event-more { font-size: 12px; color: #5c6bc0; padding: 1px 4px; cursor: pointer; font-weight: 500; }
-.cal-cell.is-today { background: #f0f4ff; }
+.cal-cell.is-today { background: #e8eeff; outline: 2px solid #5c6bc0; outline-offset: -2px; }
+.day-num.today { background: #5c6bc0 !important; color: white !important; }
+.month-label-cell { font-size: 10px; font-weight: 500; color: #5c6bc0; background: #f0f4ff; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; display: block; }
+.new-month-border { border-left: 2px solid #5c6bc0 !important; }
 .reset-btn { padding: 6px 14px; border: 1px solid #e53935; border-radius: 6px; background: white; cursor: pointer; font-size: 13px; font-family: 'Sarabun', sans-serif; color: #e53935; }
 .reset-btn:hover { background: #fff5f5; }
 .event-more:hover { text-decoration: underline; }
@@ -392,6 +395,12 @@ function renderCalendar() {
     if (dateStr===tStr) numEl.classList.add("today");
     numEl.textContent = dayNum;
     cell.appendChild(numEl);
+    if (dateStr === tStr) {
+      const todayTag = document.createElement("span");
+      todayTag.style.cssText = "font-size:11px;color:#5c6bc0;font-weight:500;margin-left:4px;vertical-align:middle;";
+      todayTag.textContent = "วันนี้";
+      cell.appendChild(todayTag);
+    }
 
     if (info) {
       const maxShow = 3;
@@ -474,7 +483,7 @@ function showDayPopup(dateStr, events) {
   const label = `${d.getDate()} ${["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][d.getMonth()]} ${d.getFullYear()}`;
   document.getElementById("dayPopupTitle").textContent = label;
   document.getElementById("dayPopupContent").innerHTML = events.map(ev =>
-    `<div class="event ${ev.cls}" style="margin-bottom:4px;cursor:pointer" onclick="showModal(allStores.find(s=>s['Nest Store Code']==='${ev.store['Nest Store Code']}'))">${ev.label} — ${ev.store["Store Name"]}</div>`
+    `<div class="event ${ev.cls}" style="margin-bottom:4px;cursor:pointer" onclick="selectStore(allStores.find(s=>s['Nest Store Code']==='${ev.store['Nest Store Code']}'));document.getElementById('dayPopupBg').classList.remove('show');">${ev.item && ev.item.showName ? ev.label+': '+ev.store['Store Name'] : ev.label+' — '+ev.store['Store Name']}</div>`
   ).join("");
   document.getElementById("dayPopupBg").classList.add("show");
 }
