@@ -203,12 +203,19 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRo75-UkhXcDBND
 const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 
 let allStores = [];
-let currentYear, currentMonth, currentTab = "all";
+let currentTab = "all";
 
 const today = new Date();
 today.setHours(0,0,0,0);
-currentYear = today.getFullYear();
-currentMonth = today.getMonth();
+
+function getWeekStart(d) {
+  const x = new Date(d);
+  x.setDate(x.getDate() - x.getDay());
+  x.setHours(0,0,0,0);
+  return x;
+}
+
+let viewStart = getWeekStart(today);
 
 // แก้ bug +1 วัน: parse date string เป็น local time ไม่ใช่ UTC
 function parseDate(str) {
@@ -250,6 +257,7 @@ const TASK_ITEMS = [
   { key: "Last Order HB Sell",         label: "Last Order HB",       cls: "color-task" },
   { key: "Set Parameter (D-2)",        label: "Set Parameter",       cls: "color-task" },
   { key: "Reassign TB2 (D+8)",         label: "Reassign TB2",        cls: "color-task" },
+  { key: "Grand Open Date",            label: "เปิดร้าน",            cls: "color-open" },
 ];
 
 const categoryMap = {};
@@ -326,34 +334,29 @@ function renderCalendar() {
   const grid = document.getElementById("calGrid");
   grid.innerHTML = "";
 
-  document.getElementById("monthLabel").textContent = THAI_MONTHS[currentMonth] + " " + (currentYear+543);
-  document.getElementById("storeCount").textContent = `แสดง ${stores.length} ร้านที่ยังไม่เปิด`;
-
-  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
-  const daysInPrev = new Date(currentYear, currentMonth, 0).getDate();
-  const totalCells = Math.ceil((firstDay+daysInMonth)/7)*7;
+  // แสดง 5 สัปดาห์ = 35 วัน
+  const totalCells = 35;
   const tStr = todayStr();
+
+  // label แสดงช่วงวัน
+  const endDate = new Date(viewStart);
+  endDate.setDate(endDate.getDate() + 34);
+  const startM = THAI_MONTHS[viewStart.getMonth()];
+  const endM = THAI_MONTHS[endDate.getMonth()];
+  const label = viewStart.getMonth() === endDate.getMonth()
+    ? `${startM} ${viewStart.getFullYear()}`
+    : `${startM} – ${endM} ${endDate.getFullYear()}`;
+  document.getElementById("monthLabel").textContent = label;
+  document.getElementById("storeCount").textContent = `แสดง ${stores.length} ร้านที่ยังไม่เปิด`;
 
   for (let i = 0; i < totalCells; i++) {
     const cell = document.createElement("div");
     cell.className = "cal-cell";
-    let dateStr, dayNum, isOther = false;
-
-    if (i < firstDay) {
-      dayNum = daysInPrev - firstDay + i + 1;
-      dateStr = dateToStr(new Date(currentYear, currentMonth-1, dayNum));
-      isOther = true;
-    } else if (i >= firstDay + daysInMonth) {
-      dayNum = i - firstDay - daysInMonth + 1;
-      dateStr = dateToStr(new Date(currentYear, currentMonth+1, dayNum));
-      isOther = true;
-    } else {
-      dayNum = i - firstDay + 1;
-      dateStr = dateToStr(new Date(currentYear, currentMonth, dayNum));
-    }
-
-    if (isOther) cell.classList.add("other-month");
+    const curDate = new Date(viewStart);
+    curDate.setDate(curDate.getDate() + i);
+    const dateStr = dateToStr(curDate);
+    const dayNum = curDate.getDate();
+    const isOther = false;
 
     const info = eventMap[dateStr];
     if (info && info.fairType && !isOther) {
@@ -404,13 +407,7 @@ function showStoreInfo(store) {
     <div class="info-group"><div class="info-label">Store Layout</div><div class="info-val">${store["Store Layout"]||"-"} ตรม.</div></div>
     <div class="info-group"><div class="info-label">รอบจัด</div><div class="info-val">${store["Replen Pick Amb"]||"-"}</div></div>
     <div class="info-group"><div class="info-label">รอบส่ง</div><div class="info-val">${store["Replen Deli Amb"]||"-"}</div></div>
-    <div class="info-group">
-      <div class="info-label">วันจัด / วันส่ง</div>
-      <div>
-        <span class="date-chip color-food-pick">จัด Food: ${store["PickDate_Food"]||"-"}</span>
-        <span class="date-chip color-food-del">ส่ง Food: ${store["Food Delivery (D-4)"]||"-"}</span>
-      </div>
-    </div>
+
   `;
 }
 
@@ -457,8 +454,8 @@ async function loadData() {
   }
 }
 
-document.getElementById("prevMonth").addEventListener("click", ()=>{ currentMonth--; if(currentMonth<0){currentMonth=11;currentYear--;} renderCalendar(); });
-document.getElementById("nextMonth").addEventListener("click", ()=>{ currentMonth++; if(currentMonth>11){currentMonth=0;currentYear++;} renderCalendar(); });
+document.getElementById("prevMonth").addEventListener("click", ()=>{ viewStart.setDate(viewStart.getDate()-7); renderCalendar(); });
+document.getElementById("nextMonth").addEventListener("click", ()=>{ viewStart.setDate(viewStart.getDate()+7); renderCalendar(); });
 document.getElementById("storeSelect").addEventListener("change", function(){ showStoreInfo(allStores.find(s=>s["Nest Store Code"]===this.value)||null); renderCalendar(); });
 document.getElementById("filterDC").addEventListener("change", renderCalendar);
 
