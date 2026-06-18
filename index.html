@@ -617,7 +617,6 @@ function selectStoreScheduleOnly(store) {
 }
 
 function openMultiStorePanel(storeCodes, taskLabel) {
-  // switch tab Tasks
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
   document.querySelectorAll(".tab-btn").forEach(b => { if(b.dataset.tab==="tasks") b.classList.add("active"); });
   currentTab = "tasks";
@@ -625,13 +624,10 @@ function openMultiStorePanel(storeCodes, taskLabel) {
   document.getElementById("configView").style.display = "none";
 
   const stores = storeCodes.map(code => allStores.find(s => s["Nest Store Code"] === code)).filter(Boolean);
-
-  // reset dropdown
   document.getElementById("storeSelect").value = "";
 
-  // render multi-store accordion ใน detail panel
   const infoEl = document.getElementById("detailStoreInfo");
-  infoEl.innerHTML = `<div style="font-size:12px;color:#888;padding:4px 0;">${taskLabel} — ${stores.length} ร้าน</div>`;
+  infoEl.innerHTML = `<div style="font-size:13px;color:#90CAF9;font-weight:500;padding:4px 0;">${taskLabel}</div><div style="font-size:11px;color:#666;margin-top:2px;">${stores.length} ร้าน</div>`;
 
   const extraEl = document.getElementById("storeInfoExtra");
   if (extraEl) extraEl.innerHTML = "";
@@ -640,14 +636,19 @@ function openMultiStorePanel(storeCodes, taskLabel) {
   const tlEl = document.getElementById("detailTimeline");
   tlEl.innerHTML = "";
 
-  const tabsHtml = stores.map((store, idx) => {
+  // แสดงแค่รายชื่อร้าน accordion ยุบอยู่ทั้งหมด
+  const tabsHtml = stores.map((store) => {
     const openD2 = parseDate(store["Grand Open Date"]);
     const fairEnd = openD2 ? new Date(openD2) : null;
     if (fairEnd) fairEnd.setDate(fairEnd.getDate() + 13);
     const fmt = (d) => `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]}`;
 
     const schedItems = SCHEDULE_ITEMS.filter(i => store[i.key]);
-    const taskItems = TASK_ITEMS.filter(i => store[i.key] || (i.lastOrderFrom && store[i.lastOrderFrom]));
+    const taskItems = TASK_ITEMS.filter(i => {
+      if (i.lastOrderFrom) return !!store[i.lastOrderFrom];
+      if (i.key.startsWith("_")) return false;
+      return !!store[i.key];
+    });
 
     const makeTabRow = (item) => {
       let d;
@@ -663,14 +664,14 @@ function openMultiStorePanel(storeCodes, taskLabel) {
     };
 
     return `
-      <div>
-        <div class="store-tab-header ${idx===0?'active':''}" onclick="toggleStoreTab(this)">
+      <div style="margin-bottom:4px;">
+        <div class="store-tab-header" onclick="toggleStoreTab(this)">
           <span class="tab-name">${store["Store Name"]}</span>
-          <span class="tab-arrow">▼</span>
+          <span style="font-size:10px;color:#555;">▼</span>
         </div>
-        <div class="store-tab-body ${idx===0?'show':''}">
+        <div class="store-tab-body">
           <div class="tab-store-meta">${store["Nest Store Code"]} · DC: ${store["DC Code"]} · ${store["Store Layout"]||"-"} ตรม.</div>
-          ${openD2 ? `<div class="tab-store-meta" style="color:#90CAF9;">เปิดร้าน: ${fmt(openD2)} · Fair: ${fmt(openD2)}–${fmt(fairEnd)}</div>` : ""}
+          ${openD2 ? `<div class="tab-store-meta" style="color:#90CAF9;">วันเปิด: ${fmt(openD2)} &nbsp;·&nbsp; Fair: ${fmt(openD2)}–${fmt(fairEnd)}</div>` : ""}
           <div class="tab-section">Schedule</div>
           ${schedItems.map(i => makeTabRow(i)).join("")}
           <div class="tab-section">Tasks</div>
@@ -689,9 +690,8 @@ function openMultiStorePanel(storeCodes, taskLabel) {
 
 function toggleStoreTab(header) {
   const body = header.nextElementSibling;
-  const isActive = header.classList.contains("active");
-  header.classList.toggle("active", !isActive);
-  body.classList.toggle("show", !isActive);
+  body.classList.toggle("show");
+  header.classList.toggle("active");
 }
 
 function renderConfig() {
