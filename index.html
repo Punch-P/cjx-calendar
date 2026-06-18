@@ -353,13 +353,13 @@ function buildEventMap(stores) {
       for (let n = 0; n <= 4; n++) {
         const d = new Date(openD); d.setDate(d.getDate()+n);
         const k = dateToStr(d);
-        if (!map[k]) map[k] = { events:[], fairType:null };
+        if (!map[k]) map[k] = { events:[], fairType:null, grouped:{} };
         if (!map[k].fairType) map[k].fairType = "peak";
       }
       for (let n = 5; n <= 13; n++) {
         const d = new Date(openD); d.setDate(d.getDate()+n);
         const k = dateToStr(d);
-        if (!map[k]) map[k] = { events:[], fairType:null };
+        if (!map[k]) map[k] = { events:[], fairType:null, grouped:{} };
         if (!map[k].fairType) map[k].fairType = "normal";
       }
     }
@@ -367,10 +367,9 @@ function buildEventMap(stores) {
     getActiveItems().forEach(item => {
       let d;
       if (item.lastOrderFrom) {
-        // Last Order = PickDate - 1 วัน
         const pickD = parseDate(store[item.lastOrderFrom]);
         if (!pickD) return;
-        d = new Date(pickD); d.setDate(d.getDate() - 1);
+        d = new Date(pickD); d.setDate(d.getDate()-1);
       } else {
         d = parseDate(store[item.key]);
       }
@@ -379,10 +378,31 @@ function buildEventMap(stores) {
       const dedupKey = k+"_"+item.key+"_"+(store["Nest Store Code"]||"");
       if (seenKeys.has(dedupKey)) return;
       seenKeys.add(dedupKey);
-      if (!map[k]) map[k] = { events:[], fairType:null };
-      map[k].events.push({ label: item.label, cls: item.cls, store, item });
+      if (!map[k]) map[k] = { events:[], fairType:null, grouped:{} };
+
+      const isOpen = item.showName;
+      if (isOpen) {
+        // เปิดร้าน → ขึ้นแยกทีละร้านเหมือนเดิม
+        map[k].events.push({ label: item.label, cls: item.cls, store, item });
+      } else {
+        // group ตาม label
+        if (!map[k].grouped[item.label]) {
+          map[k].grouped[item.label] = { label: item.label, cls: item.cls, stores: [], item };
+        }
+        map[k].grouped[item.label].stores.push(store);
+      }
     });
   });
+
+  // แปลง grouped → events
+  Object.values(map).forEach(day => {
+    Object.values(day.grouped).forEach(g => {
+      const count = g.stores.length;
+      const displayLabel = count > 1 ? `${g.label} +${count}` : g.label;
+      day.events.unshift({ label: displayLabel, cls: g.cls, store: g.stores[0], item: g.item, allStores: g.stores, isGrouped: count > 1 });
+    });
+  });
+
   return map;
 }
 
@@ -448,10 +468,13 @@ function renderCalendar() {
         el.textContent = ev.item && ev.item.showName ? ev.label+": "+ev.store["Store Name"] : ev.label;
         el.title = ev.store["Store Name"];
         el.addEventListener("click", () => {
-          const isTask = ev.item && TASK_ITEMS.some(t => t.label === ev.item.label);
+          const isTask = ev.item && TASK_ITEMS.some(t => t.label === ev.item.label || (t.lastOrderFrom && ev.item.lastOrderFrom));
           const isOpen = ev.item && ev.item.showName;
           if (isTask && !isOpen) {
-            openMultiStorePanel([ev.store["Nest Store Code"]], ev.item.label);
+            const codes = ev.allStores ? ev.allStores.map(s=>s["Nest Store Code"]) : [ev.store["Nest Store Code"]];
+            openMultiStorePanel(codes, ev.item.label);
+          } else if (!isTask) {
+            selectStoreScheduleOnly(ev.store);
           } else {
             selectStore(ev.store);
           }
