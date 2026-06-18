@@ -48,12 +48,11 @@ body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; fon
 .tl-event-task { background: #1a2a3a; color: #90CAF9; border-left: 3px solid #42A5F5; border-radius: 3px; padding: 3px 8px; font-size: 12px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .tl-event:hover { opacity: 0.8; }
 .detail-empty { color: #888; font-size: 12px; padding: 20px 0; text-align: center; }
-.detail-fair { padding: 10px 16px; border-bottom: 1px solid #2a2a2a; flex-shrink: 0; }
-.fair-title { font-size: 11px; font-weight: 500; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-.fair-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
-.fair-label { color: #777; }
-.fair-val { color: #ddd; font-weight: 500; }
 .detail-fair { padding: 10px 16px; border-bottom: 1px solid #222; flex-shrink: 0; }
+.fair-title { font-size: 11px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.fair-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+.fair-label { color: #888; }
+.fair-val { color: #ddd; font-weight: 500; }
 .fair-title { font-size: 11px; font-weight: 500; color: #999; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
 .fair-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
 .fair-label { color: #888; }
@@ -190,7 +189,6 @@ body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; fon
     <div class="detail-store-info" id="detailStoreInfo">
       <div class="detail-empty">เลือกร้านเพื่อดูรายละเอียด</div>
     </div>
-    <div class="detail-fair" id="detailFair"></div>
     <div class="detail-fair" id="detailFair"></div>
     <div class="detail-timeline" id="detailTimeline"></div>
   </div>
@@ -468,9 +466,19 @@ function updateDetailPanel(store) {
     <div class="detail-store-name">${store["Store Name"]}</div>
     <div class="detail-store-meta">${store["Nest Store Code"]} · DC: ${store["DC Code"]}</div>
     <div class="detail-store-meta" style="margin-top:-4px;">Layout: ${store["Store Layout"]||"-"} ตรม.</div>
-    <div class="detail-chips">
+    <div class="detail-chips" style="margin-top:8px;">
       <span class="detail-chip" style="background:#1b3a2a;color:#81C784;">จัด: ${store["Replen Pick Amb"]||"-"}</span>
       <span class="detail-chip" style="background:#2a1b3a;color:#CE93D8;">ส่ง: ${store["Replen Deli Amb"]||"-"}</span>
+    </div>
+    <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px; display:flex; flex-direction:column; gap:4px;">
+      <div style="display:flex; justify-content:space-between; font-size:13px;">
+        <span style="color:#888;">วันเปิดร้าน</span>
+        <span style="color:#90CAF9; font-weight:500;">${store["Grand Open Date"]||"-"}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:13px;" id="fairRowInner_${store['Nest Store Code']}">
+        <span style="color:#888;">ช่วง Fair</span>
+        <span style="color:#FFD54F; font-weight:500;" id="fairRange_${store['Nest Store Code']}">-</span>
+      </div>
     </div>
   `;
 
