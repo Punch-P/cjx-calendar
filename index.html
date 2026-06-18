@@ -792,11 +792,12 @@ function openMultiStorePanel(storeCodes, taskLabel) {
 }
 
 function toggleStoreTab(header) {
+  const item = header.closest(".acc-item") || header.parentElement;
   const body = header.nextElementSibling;
   if (!body) return;
   const isOpen = body.classList.contains("show");
   if (!isOpen && !body.innerHTML.trim()) {
-    const code = header.closest("[data-code]") ? header.closest("[data-code]").dataset.code : header.dataset.store;
+    const code = item.dataset.code || header.dataset.store;
     if (code) {
       const st = allStores.find(s => s["Nest Store Code"] === code);
       if (st) body.innerHTML = makeStoreDetailHTML(st);
@@ -804,7 +805,7 @@ function toggleStoreTab(header) {
   }
   body.classList.toggle("show", !isOpen);
   header.classList.toggle("open", !isOpen);
-  header.closest(".acc-item") && header.closest(".acc-item").classList.toggle("open-item", !isOpen);
+  if (item) item.classList.toggle("open-item", !isOpen);
   const arrow = header.querySelector(".acc-arrow");
   if (arrow) arrow.textContent = isOpen ? "▶" : "▼";
 }
