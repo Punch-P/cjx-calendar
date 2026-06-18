@@ -456,6 +456,21 @@ async function loadData() {
 
 document.getElementById("prevMonth").addEventListener("click", ()=>{ viewStart.setDate(viewStart.getDate()-7); renderCalendar(); });
 document.getElementById("nextMonth").addEventListener("click", ()=>{ viewStart.setDate(viewStart.getDate()+7); renderCalendar(); });
+
+// scroll mouse เลื่อนทีละ 1 สัปดาห์
+let scrollCooldown = false;
+document.getElementById("calView").addEventListener("wheel", (e) => {
+  e.preventDefault();
+  if (scrollCooldown) return;
+  scrollCooldown = true;
+  setTimeout(() => scrollCooldown = false, 300);
+  if (e.deltaY > 0) {
+    viewStart.setDate(viewStart.getDate() + 7);
+  } else {
+    viewStart.setDate(viewStart.getDate() - 7);
+  }
+  renderCalendar();
+}, { passive: false });
 document.getElementById("storeSelect").addEventListener("change", function(){ showStoreInfo(allStores.find(s=>s["Nest Store Code"]===this.value)||null); renderCalendar(); });
 document.getElementById("filterDC").addEventListener("change", renderCalendar);
 
