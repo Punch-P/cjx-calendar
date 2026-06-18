@@ -645,12 +645,14 @@ function updateDetailPanel(store) {
   // accordion single store — ยุบก่อน กดค่อยขยาย
   const storeCode = store["Nest Store Code"];
   tlEl.innerHTML = `
-    <div style="margin-bottom:4px;">
-      <div class="store-tab-header" onclick="toggleStoreTab(this)" data-store="${storeCode}">
-        <span class="tab-name">${store["Store Name"]}</span>
-        <span style="font-size:10px;color:#777;">▶</span>
+    <div class="acc-item" data-code="${storeCode}">
+      <div class="acc-header" onclick="toggleStoreTab(this)" data-store="${storeCode}">
+        <div class="acc-dot"></div>
+        <span class="acc-name">${store["Store Name"]}</span>
+        <span class="acc-date">${store["Grand Open Date"]||""}</span>
+        <span class="acc-arrow">▶</span>
       </div>
-      <div class="store-tab-body" id="body_${storeCode}"></div>
+      <div class="acc-body"></div>
     </div>
   `;
 
@@ -759,11 +761,13 @@ function openMultiStorePanel(storeCodes, taskLabel) {
     };
 
     return `<div style="margin-bottom:4px;" data-code="${store["Nest Store Code"]}">
-        <div class="store-tab-header" onclick="toggleStoreTab(this)">
-          <span class="tab-name">${store["Store Name"]}</span>
-          <span style="font-size:10px;color:#777;">▶</span>
+        <div class="store-tab-header acc-header" onclick="toggleStoreTab(this)">
+          <div class="acc-dot"></div>
+          <span class="acc-name">${store["Store Name"]}</span>
+          <span class="acc-date">${store["Grand Open Date"]||""}</span>
+          <span class="acc-arrow">▶</span>
         </div>
-        <div class="store-tab-body"></div>
+        <div class="store-tab-body acc-body"></div>
       </div>`;
   }).join("");
 
@@ -789,9 +793,8 @@ function openMultiStorePanel(storeCodes, taskLabel) {
 
 function toggleStoreTab(header) {
   const body = header.nextElementSibling;
-  if (!body || !body.classList.contains("store-tab-body")) return;
+  if (!body) return;
   const isOpen = body.classList.contains("show");
-  // lazy load
   if (!isOpen && !body.innerHTML.trim()) {
     const code = header.closest("[data-code]") ? header.closest("[data-code]").dataset.code : header.dataset.store;
     if (code) {
@@ -800,8 +803,9 @@ function toggleStoreTab(header) {
     }
   }
   body.classList.toggle("show", !isOpen);
-  header.classList.toggle("active", !isOpen);
-  const arrow = header.querySelector("span:last-child");
+  header.classList.toggle("open", !isOpen);
+  header.closest(".acc-item") && header.closest(".acc-item").classList.toggle("open-item", !isOpen);
+  const arrow = header.querySelector(".acc-arrow");
   if (arrow) arrow.textContent = isOpen ? "▶" : "▼";
 }
 
@@ -842,7 +846,6 @@ function checkPw() {
 const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzADiwBW8G9AsusIV-6PUVtnW-GZfSBR0mGTxLLbiypyLFC2wWCNAfVCM8sIi21v-pCkA/exec";
 const TASK_DONE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRo75-UkhXcDBNDjcw8SpyjTNZZq1w6mZoRUxYAYd1FO4sAQGMkuHzD4bx0CupUHFaGSMYwRsaQ4RoW/pub?gid=1822590170&single=true&output=csv";
 
-let currentUser = null;
 let taskDoneMap = {};  // store_code -> {done_submit_or: "อีฟ", ...}
 
 const TASK_COL_MAP = {
