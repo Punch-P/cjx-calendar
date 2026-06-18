@@ -447,7 +447,15 @@ function renderCalendar() {
         el.className = "event "+ev.cls;
         el.textContent = ev.item && ev.item.showName ? ev.label+": "+ev.store["Store Name"] : ev.label;
         el.title = ev.store["Store Name"];
-        el.addEventListener("click", () => selectStore(ev.store));
+        el.addEventListener("click", () => {
+          const isTask = ev.item && TASK_ITEMS.some(t => t.label === ev.item.label);
+          const isOpen = ev.item && ev.item.showName;
+          if (isTask && !isOpen) {
+            openMultiStorePanel([ev.store["Nest Store Code"]], ev.item.label);
+          } else {
+            selectStore(ev.store);
+          }
+        });
         cell.appendChild(el);
       });
       if (info.events.length > maxShow) {
@@ -545,10 +553,122 @@ function showDayPopup(dateStr, events) {
   const p = dateStr.split("-");
   const d = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
   document.getElementById("dayPopupTitle").textContent = `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
-  document.getElementById("dayPopupContent").innerHTML = events.map(ev =>
-    `<div class="event ${ev.cls}" style="margin-bottom:4px;cursor:pointer" onclick="selectStore(allStores.find(s=>s['Nest Store Code']==='${ev.store['Nest Store Code']}'));document.getElementById('dayPopupBg').classList.remove('show');">${ev.item&&ev.item.showName?ev.label+': '+ev.store['Store Name']:ev.label+' — '+ev.store['Store Name']}</div>`
-  ).join("");
+
+  // group events ที่ label เหมือนกัน
+  const grouped = {};
+  events.forEach(ev => {
+    const key = ev.label;
+    if (!grouped[key]) grouped[key] = { label: ev.label, cls: ev.cls, stores: [], item: ev.item };
+    grouped[key].stores.push(ev.store);
+  });
+
+  const html = Object.values(grouped).map(g => {
+    const isTask = g.item && (TASK_ITEMS.some(t => t.label === g.label));
+    const isOpen = g.item && g.item.showName;
+    const count = g.stores.length;
+    const labelText = count > 1 ? `${g.label} +${count}` : g.label + (isOpen ? ": " + g.stores[0]["Store Name"] : " — " + g.stores[0]["Store Name"]);
+
+    if (isOpen) {
+      // เปิดร้าน → selectStore ปกติ
+      return `<div class="event ${g.cls}" style="margin-bottom:4px;cursor:pointer" onclick="selectStore(allStores.find(s=>s['Nest Store Code']==='${g.stores[0]['Nest Store Code']}'));document.getElementById('dayPopupBg').classList.remove('show');">${labelText}</div>`;
+    } else if (isTask) {
+      // task → เปิด multi-store panel + filter Tasks
+      return `<div class="event color-task" style="margin-bottom:4px;cursor:pointer" onclick="openMultiStorePanel(${JSON.stringify(g.stores.map(s=>s['Nest Store Code']))}, '${g.label}');document.getElementById('dayPopupBg').classList.remove('show');">${labelText}</div>`;
+    } else {
+      // schedule → selectStore ปกติ ไม่ show tasks
+      return `<div class="event ${g.cls}" style="margin-bottom:4px;cursor:pointer" onclick="selectStoreScheduleOnly(allStores.find(s=>s['Nest Store Code']==='${g.stores[0]['Nest Store Code']}'));document.getElementById('dayPopupBg').classList.remove('show');">${labelText}</div>`;
+    }
+  }).join("");
+
+  document.getElementById("dayPopupContent").innerHTML = html;
   document.getElementById("dayPopupBg").classList.add("show");
+}
+
+function selectStoreScheduleOnly(store) {
+  if (!store) return;
+  document.getElementById("storeSelect").value = store["Nest Store Code"];
+  updateDetailPanel(store);
+  const openD = parseDate(store["Grand Open Date"]);
+  if (openD) { viewStart = new Date(getWeekStart(openD)); viewStart.setDate(viewStart.getDate()-14); }
+  renderCalendar();
+}
+
+function openMultiStorePanel(storeCodes, taskLabel) {
+  // switch tab Tasks
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b => { if(b.dataset.tab==="tasks") b.classList.add("active"); });
+  currentTab = "tasks";
+  document.getElementById("calView").style.display = "flex";
+  document.getElementById("configView").style.display = "none";
+
+  const stores = storeCodes.map(code => allStores.find(s => s["Nest Store Code"] === code)).filter(Boolean);
+
+  // reset dropdown
+  document.getElementById("storeSelect").value = "";
+
+  // render multi-store accordion ใน detail panel
+  const infoEl = document.getElementById("detailStoreInfo");
+  infoEl.innerHTML = `<div style="font-size:12px;color:#888;padding:4px 0;">${taskLabel} — ${stores.length} ร้าน</div>`;
+
+  const extraEl = document.getElementById("storeInfoExtra");
+  if (extraEl) extraEl.innerHTML = "";
+  document.getElementById("detailFair").innerHTML = "";
+
+  const tlEl = document.getElementById("detailTimeline");
+  tlEl.innerHTML = "";
+
+  const tabsHtml = stores.map((store, idx) => {
+    const openD2 = parseDate(store["Grand Open Date"]);
+    const fairEnd = openD2 ? new Date(openD2) : null;
+    if (fairEnd) fairEnd.setDate(fairEnd.getDate() + 13);
+    const fmt = (d) => `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]}`;
+
+    const schedItems = SCHEDULE_ITEMS.filter(i => store[i.key]);
+    const taskItems = TASK_ITEMS.filter(i => store[i.key] || (i.lastOrderFrom && store[i.lastOrderFrom]));
+
+    const makeTabRow = (item) => {
+      let d;
+      if (item.lastOrderFrom) {
+        const pd = parseDate(store[item.lastOrderFrom]);
+        if (!pd) return "";
+        d = new Date(pd); d.setDate(d.getDate()-1);
+      } else {
+        d = parseDate(store[item.key]);
+      }
+      if (!d) return "";
+      return `<div class="tab-row"><div class="tab-date">${fmt(d)}</div><div class="tab-event ${item.cls}">${item.label}</div></div>`;
+    };
+
+    return `
+      <div>
+        <div class="store-tab-header ${idx===0?'active':''}" onclick="toggleStoreTab(this)">
+          <span class="tab-name">${store["Store Name"]}</span>
+          <span class="tab-arrow">▼</span>
+        </div>
+        <div class="store-tab-body ${idx===0?'show':''}">
+          <div class="tab-store-meta">${store["Nest Store Code"]} · DC: ${store["DC Code"]} · ${store["Store Layout"]||"-"} ตรม.</div>
+          ${openD2 ? `<div class="tab-store-meta" style="color:#90CAF9;">เปิดร้าน: ${fmt(openD2)} · Fair: ${fmt(openD2)}–${fmt(fairEnd)}</div>` : ""}
+          <div class="tab-section">Schedule</div>
+          ${schedItems.map(i => makeTabRow(i)).join("")}
+          <div class="tab-section">Tasks</div>
+          ${taskItems.map(i => makeTabRow(i)).join("")}
+        </div>
+      </div>`;
+  }).join("");
+
+  const tabsEl = document.createElement("div");
+  tabsEl.className = "store-tabs";
+  tabsEl.innerHTML = tabsHtml;
+  tlEl.appendChild(tabsEl);
+
+  renderCalendar();
+}
+
+function toggleStoreTab(header) {
+  const body = header.nextElementSibling;
+  const isActive = header.classList.contains("active");
+  header.classList.toggle("active", !isActive);
+  body.classList.toggle("show", !isActive);
 }
 
 function renderConfig() {
