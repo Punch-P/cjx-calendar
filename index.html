@@ -370,7 +370,7 @@ function buildEventMap(stores) {
   const map = {};
   stores.forEach(store => {
     const openD = parseDate(store["Grand Open Date"]);
-    if (openD) {
+    if (openD && currentTab !== "all") {
       for (let n = 0; n <= 4; n++) {
         const d = new Date(openD); d.setDate(d.getDate()+n);
         const k = dateToStr(d);
@@ -641,11 +641,7 @@ function updateDetailPanel(store) {
       <div class="store-tab-body" id="body_${storeCode}"></div>
     </div>
   `;
-  // lazy load detail เมื่อกด
-  document.querySelector(`[data-store="${storeCode}"]`).addEventListener("click", function() {
-    const body = this.nextElementSibling;
-    if (!body.innerHTML) body.innerHTML = makeStoreDetailHTML(store);
-  }, { once: false });
+
 }
 
 function selectStore(store) {
@@ -781,9 +777,18 @@ function openMultiStorePanel(storeCodes, taskLabel) {
 
 function toggleStoreTab(header) {
   const body = header.nextElementSibling;
+  if (!body || !body.classList.contains("store-tab-body")) return;
   const isOpen = body.classList.contains("show");
-  body.classList.toggle("show");
-  header.classList.toggle("active");
+  // lazy load
+  if (!isOpen && !body.innerHTML.trim()) {
+    const code = header.closest("[data-code]") ? header.closest("[data-code]").dataset.code : header.dataset.store;
+    if (code) {
+      const st = allStores.find(s => s["Nest Store Code"] === code);
+      if (st) body.innerHTML = makeStoreDetailHTML(st);
+    }
+  }
+  body.classList.toggle("show", !isOpen);
+  header.classList.toggle("active", !isOpen);
   const arrow = header.querySelector("span:last-child");
   if (arrow) arrow.textContent = isOpen ? "▶" : "▼";
 }
@@ -950,10 +955,40 @@ document.getElementById("resetBtn").addEventListener("click", ()=>{
 });
 
 document.getElementById("filterDate").addEventListener("change", function() {
-  const d = parseDate(this.value);
+  const dateVal = this.value;
+  const d = parseDate(dateVal);
   if (d) {
     viewStart = new Date(getWeekStart(d));
     viewStart.setDate(viewStart.getDate() - 7);
+
+    // หาร้านที่เปิดวันนั้น → แสดงเป็น accordion ใน detail panel
+    const stores = allStores.filter(s => s["Grand Open Date"] === dateVal);
+    if (stores.length > 0) {
+      const infoEl = document.getElementById("detailStoreInfo");
+      const tlEl = document.getElementById("detailTimeline");
+      const fairEl = document.getElementById("detailFair");
+      const extraEl = document.getElementById("storeInfoExtra");
+
+      infoEl.innerHTML = `<div style="font-size:13px;color:#90CAF9;font-weight:500;">วันเปิดร้าน</div>
+        <div style="font-size:11px;color:#666;margin-top:2px;">${stores.length} ร้าน · ${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}</div>`;
+      if (fairEl) fairEl.innerHTML = "";
+      if (extraEl) extraEl.innerHTML = "";
+
+      const tabsHtml = stores.map(store => `
+        <div style="margin-bottom:4px;" data-code="${store["Nest Store Code"]}">
+          <div class="store-tab-header" onclick="toggleStoreTab(this)">
+            <span class="tab-name">${store["Store Name"]}</span>
+            <span style="font-size:10px;color:#777;">▶</span>
+          </div>
+          <div class="store-tab-body"></div>
+        </div>`).join("");
+
+      const tabsEl = document.createElement("div");
+      tabsEl.className = "store-tabs";
+      tabsEl.innerHTML = tabsHtml;
+      tlEl.innerHTML = "";
+      tlEl.appendChild(tabsEl);
+    }
   }
   renderCalendar();
 });
