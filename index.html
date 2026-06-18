@@ -44,8 +44,20 @@ body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; fon
 .tl-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
 .tl-date { width: 56px; font-size: 12px; color: #ccc; flex-shrink: 0; }
 .tl-event { border-radius: 3px; padding: 3px 8px; font-size: 12px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.tl-event-task { background: #0d1f2d; color: #90CAF9; border-left: 3px solid #42A5F5; border-radius: 3px; padding: 3px 8px; font-size: 12px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.tl-event-task { background: #1a2a3a; color: #90CAF9; border-left: 3px solid #42A5F5; border-radius: 3px; padding: 3px 8px; font-size: 12px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .tl-event:hover { opacity: 0.8; }
 .detail-empty { color: #888; font-size: 12px; padding: 20px 0; text-align: center; }
+.detail-fair { padding: 10px 16px; border-bottom: 1px solid #2a2a2a; flex-shrink: 0; }
+.fair-title { font-size: 11px; font-weight: 500; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.fair-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+.fair-label { color: #777; }
+.fair-val { color: #ddd; font-weight: 500; }
+.detail-fair { padding: 10px 16px; border-bottom: 1px solid #222; flex-shrink: 0; }
+.fair-title { font-size: 11px; font-weight: 500; color: #999; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.fair-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+.fair-label { color: #888; }
+.fair-val { color: #fff; font-weight: 500; }
 
 /* ขวา 70% ปฏิทิน */
 .cal-side { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; background: #fff; color: #2c2c2c; }
@@ -103,7 +115,7 @@ body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; fon
 .color-chill-pick   { background: #1a2a00; color: #AED581; }
 .color-chill-del    { background: #121e00; color: #DCEDC8; border-left: 2px solid #AED581; }
 .color-open         { background: #37474F; color: #FFFFFF; }
-.color-task         { background: #FFF9C4; color: #E65100; border: 1px solid #FFE082; }
+.color-task         { background: #E3F2FD; color: #0D47A1; border: 1px solid #90CAF9; }
 
 .loading { text-align: center; padding: 50px; color: #444; font-size: 14px; }
 
@@ -178,6 +190,8 @@ body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; fon
     <div class="detail-store-info" id="detailStoreInfo">
       <div class="detail-empty">เลือกร้านเพื่อดูรายละเอียด</div>
     </div>
+    <div class="detail-fair" id="detailFair"></div>
+    <div class="detail-fair" id="detailFair"></div>
     <div class="detail-timeline" id="detailTimeline"></div>
   </div>
 
@@ -477,7 +491,7 @@ function updateDetailPanel(store) {
     <div class="tl-section">Schedule</div>
     ${schedItems.map(makeRow).join("")}
     <div class="tl-section">Tasks</div>
-    ${taskItems.map(makeRow).join("")}
+    ${taskItems.map(i=>makeRow(i,true)).join("")}
   `;
 }
 
