@@ -239,6 +239,18 @@ body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; fon
 </div>
 
 <!-- Confirm popup -->
+<div class="pw-popup-bg" id="pwPopupBg">
+  <div class="pw-popup">
+    <h3>ใส่รหัสเพื่อเข้า Tasks</h3>
+    <input type="password" class="pw-input" id="pwInput" placeholder="รหัสผ่าน" onkeydown="if(event.key==='Enter')checkPw()">
+    <div class="pw-error" id="pwError">รหัสไม่ถูกต้อง</div>
+    <div class="pw-btns">
+      <button class="pw-ok" onclick="checkPw()">ยืนยัน</button>
+      <button class="pw-cancel" onclick="document.getElementById('pwPopupBg').classList.remove('show');document.getElementById('pwInput').value='';document.getElementById('pwError').style.display='none'">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
 <div class="confirm-popup-bg" id="confirmPopupBg">
   <div class="confirm-popup">
     <p id="confirmMsg"></p>
@@ -805,6 +817,28 @@ function renderConfig() {
   `).join("");
 }
 
+const VALID_PASSWORDS = ["aum", "eve", "cheer"];
+let taskUnlocked = false;
+let currentUser = null;
+
+function checkPw() {
+  const pw = document.getElementById("pwInput").value.trim().toLowerCase();
+  if (VALID_PASSWORDS.includes(pw)) {
+    taskUnlocked = true;
+    currentUser = pw;
+    document.getElementById("pwPopupBg").classList.remove("show");
+    document.getElementById("pwInput").value = "";
+    document.getElementById("pwError").style.display = "none";
+    // เปิด Tasks tab
+    currentTab = "tasks";
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b => { if(b.dataset.tab==="tasks") b.classList.add("active"); });
+    renderCalendar();
+  } else {
+    document.getElementById("pwError").style.display = "block";
+  }
+}
+
 const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzADiwBW8G9AsusIV-6PUVtnW-GZfSBR0mGTxLLbiypyLFC2wWCNAfVCM8sIi21v-pCkA/exec";
 const TASK_DONE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRo75-UkhXcDBNDjcw8SpyjTNZZq1w6mZoRUxYAYd1FO4sAQGMkuHzD4bx0CupUHFaGSMYwRsaQ4RoW/pub?gid=1822590170&single=true&output=csv";
 
@@ -949,8 +983,13 @@ document.getElementById("storeSelect").addEventListener("change", function(){
 document.getElementById("resetBtn").addEventListener("click", ()=>{
   document.getElementById("storeSelect").value = "";
   document.getElementById("filterDate").value = "";
+  taskUnlocked = false;
+  currentUser = null;
   updateDetailPanel(null);
   viewStart = getWeekStart(today);
+  currentTab = "all";
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b => { if(b.dataset.tab==="all") b.classList.add("active"); });
   renderCalendar();
 });
 
@@ -995,9 +1034,14 @@ document.getElementById("filterDate").addEventListener("change", function() {
 
 document.querySelectorAll(".tab-btn").forEach(btn=>{
   btn.addEventListener("click", function(){
+    const tab = this.dataset.tab;
+    if (tab === "tasks" && !taskUnlocked) {
+      document.getElementById("pwPopupBg").classList.add("show");
+      setTimeout(() => document.getElementById("pwInput").focus(), 100);
+      return;
+    }
     document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
     this.classList.add("active");
-    const tab = this.dataset.tab;
     if (tab==="config") {
       document.getElementById("calView").style.display="none";
       document.getElementById("configView").style.display="block";
