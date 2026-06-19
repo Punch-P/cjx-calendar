@@ -248,7 +248,6 @@ body {
 
 .loading { text-align: center; padding: 50px; color: #444; font-size: 14px; }
 </style>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -274,7 +273,7 @@ body {
     <button class="tab-btn active" data-tab="all">Overall</button>
     <button class="tab-btn" data-tab="schedule">Schedule</button>
     <!-- ⚠️ Tasks tab — ต้องใส่รหัสก่อนถึงจะเข้าได้ -->
-    <button class="tab-btn" data-tab="tasks" id="tasksTabBtn">Tasks 🔒</button>
+    <button class="tab-btn" data-tab="tasks" id="tasksTabBtn" title="กดอีกครั้งเพื่อล็อค">Tasks 🔒</button>
     <button class="tab-btn" data-tab="config">⚙ จัดกลุ่ม</button>
   </div>
 </div>
@@ -349,12 +348,24 @@ body {
 <div class="popup-bg" id="pwPopup">
   <div class="popup-box">
     <h3>ใส่รหัสเพื่อเข้า Tasks</h3>
-    <input type="password" class="pw-input" id="pwInput" placeholder="รหัสผ่าน"
-           onkeydown="if(event.key==='Enter') checkPassword()">
+    <input type="password" class="pw-input" id="pwInput" placeholder="รหัสผ่าน">
     <div class="pw-error" id="pwError">รหัสไม่ถูกต้อง</div>
     <div class="popup-btns">
-      <button class="btn-primary" onclick="checkPassword()">ยืนยัน</button>
-      <button class="btn-secondary" onclick="closePwPopup()">ยกเลิก</button>
+      <button class="btn-primary" id="pwConfirmBtn">ยืนยัน</button>
+      <button class="btn-secondary" id="pwCancelBtn">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Popup: Confirm Lock Tasks ─────────────────────────── -->
+<!-- ⚠️ ใหม่: ถามก่อน lock เมื่อกด Tasks tab ซ้ำขณะ unlock อยู่ -->
+<div class="popup-bg" id="lockConfirmPopup">
+  <div class="popup-box">
+    <h3>ล็อค Tasks?</h3>
+    <p>คุณกำลังจะออกจากโหมด Tasks และต้องใส่รหัสใหม่เพื่อกลับเข้ามา ต้องการดำเนินการต่อหรือไม่?</p>
+    <div class="popup-btns">
+      <button class="btn-danger" id="lockConfirmYesBtn">ล็อค</button>
+      <button class="btn-secondary" id="lockConfirmCancelBtn">ยกเลิก</button>
     </div>
   </div>
 </div>
@@ -365,7 +376,7 @@ body {
     <p id="confirmMsg"></p>
     <div class="popup-btns">
       <button class="btn-primary" id="confirmYesBtn">ยืนยัน</button>
-      <button class="btn-secondary" onclick="document.getElementById('confirmPopup').classList.remove('show')">ยกเลิก</button>
+      <button class="btn-secondary" id="confirmCancelBtn">ยกเลิก</button>
     </div>
   </div>
 </div>
@@ -402,6 +413,9 @@ const THAI_MONTHS_S    = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ
       ถ้าเปลี่ยน header ใน Apps Script ต้องเปลี่ยน key ที่นี่ด้วย
    ⚠️ showName:true = แสดงชื่อร้านต่อท้าย label (ใช้กับเปิดร้าน)
    ⚠️ lastOrderFrom = คำนวณ date จาก PickDate นั้น - 1 วัน
+   ⚠️ isTask:true = ใช้ระบุชัดเจนว่า item นี้เป็น "งาน Task"
+      (ก่อนหน้านี้เคยใช้วิธีเทียบ label กับ TASK_ITEMS แทน ซึ่งเสี่ยงผิดพลาด
+       ถ้า label ของ schedule กับ task บังเอิญซ้ำกัน — แก้แล้วโดยตั้ง flag ตรงนี้)
    ════════════════════════════════════════════════════════════ */
 const SCHEDULE_ITEMS = [
   { key:"PickDate_Food",              label:"จัด Food",        cls:"color-food-pick" },
@@ -422,21 +436,21 @@ const SCHEDULE_ITEMS = [
 ];
 
 const TASK_ITEMS = [
-  { key:"Submit OR First Lot (D-8)",  label:"Submit OR First Lot",  cls:"color-task" },
-  { key:"OOS Report to Commer (D-7)", label:"OOS Report",           cls:"color-task" },
-  { key:"Commer Feedback (D-5)",      label:"Commer Feedback",      cls:"color-task" },
-  { key:"Last Order HB Sell",         label:"Last Order HB",        cls:"color-task" },
-  { key:"Set Parameter (D-2)",        label:"Set Parameter",        cls:"color-task" },
-  { key:"Reassign TB2 (D+8)",         label:"Reassign TB2",         cls:"color-task" },
+  { key:"Submit OR First Lot (D-8)",  label:"Submit OR First Lot",  cls:"color-task", isTask:true },
+  { key:"OOS Report to Commer (D-7)", label:"OOS Report",           cls:"color-task", isTask:true },
+  { key:"Commer Feedback (D-5)",      label:"Commer Feedback",      cls:"color-task", isTask:true },
+  { key:"Last Order HB Sell",         label:"Last Order HB",        cls:"color-task", isTask:true },
+  { key:"Set Parameter (D-2)",        label:"Set Parameter",        cls:"color-task", isTask:true },
+  { key:"Reassign TB2 (D+8)",         label:"Reassign TB2",         cls:"color-task", isTask:true },
   { key:"Grand Open Date",            label:"เปิดร้าน",             cls:"color-open", showName:true },
   // Last Order = PickDate - 1 วัน (คำนวณใน JS ไม่ได้ดึงจาก column โดยตรง)
-  { key:"_lo_food",    label:"Last Order Food",     cls:"color-task", lastOrderFrom:"PickDate_Food"              },
-  { key:"_lo_store",   label:"Last Order Store Use", cls:"color-task", lastOrderFrom:"PickDate_Store Use"        },
-  { key:"_lo_bao",     label:"Last Order Bao Café",  cls:"color-task", lastOrderFrom:"PickDate_Bao Café"         },
-  { key:"_lo_nonfood", label:"Last Order Non Food",  cls:"color-task", lastOrderFrom:"PickDate_Non Food"         },
-  { key:"_lo_life",    label:"Last Order Life Style",cls:"color-task", lastOrderFrom:"PickDate_Life Style"       },
-  { key:"_lo_pro",     label:"Last Order เก็บตก",   cls:"color-task", lastOrderFrom:"PickDate_สินค้ารอบเก็บตก"},
-  { key:"_lo_chilled", label:"Last Order Chilled",   cls:"color-task", lastOrderFrom:"PickDate_Chilled"          },
+  { key:"_lo_food",    label:"Last Order Food",     cls:"color-task", isTask:true, lastOrderFrom:"PickDate_Food"              },
+  { key:"_lo_store",   label:"Last Order Store Use", cls:"color-task", isTask:true, lastOrderFrom:"PickDate_Store Use"        },
+  { key:"_lo_bao",     label:"Last Order Bao Café",  cls:"color-task", isTask:true, lastOrderFrom:"PickDate_Bao Café"         },
+  { key:"_lo_nonfood", label:"Last Order Non Food",  cls:"color-task", isTask:true, lastOrderFrom:"PickDate_Non Food"         },
+  { key:"_lo_life",    label:"Last Order Life Style",cls:"color-task", isTask:true, lastOrderFrom:"PickDate_Life Style"       },
+  { key:"_lo_pro",     label:"Last Order เก็บตก",   cls:"color-task", isTask:true, lastOrderFrom:"PickDate_สินค้ารอบเก็บตก"},
+  { key:"_lo_chilled", label:"Last Order Chilled",   cls:"color-task", isTask:true, lastOrderFrom:"PickDate_Chilled"          },
 ];
 
 /* TASK_COL_MAP: map label → column ใน GSheet task_done
@@ -467,6 +481,7 @@ let taskDoneMap  = {}; // { store_code: { done_submit_or: "eve", ... } }
 let currentTab   = "all";
 let taskUnlocked = false;
 let currentUser  = null;
+let pendingDayPopupEvent = null; // ⚠️ ใหม่: เก็บ event ที่ถูกกดใน day popup แทนการฝัง JSON ใน onclick string
 
 const today = new Date(); today.setHours(0,0,0,0);
 function getWeekStart(d) { const x=new Date(d); x.setDate(x.getDate()-x.getDay()); x.setHours(0,0,0,0); return x; }
@@ -627,6 +642,8 @@ function renderCalendar() {
   document.getElementById("storeCount").textContent = `แสดง ${stores.length} ร้านที่ยังไม่เปิด`;
 
   const tStr = todayStr();
+  // ⚠️ render 5 สัปดาห์ (35 วัน) บน grid ที่มี 8 columns ต่อแถว (1 month-col + 7 วัน)
+  // รวม element ทั้งหมด = 35 cell + 5 month-col = 40 → ตรงกับ CSS grid-template-columns: 36px repeat(7,1fr) x 5 แถว
   for (let i=0; i<35; i++) {
     // ใส่ month-col ทุกต้นสัปดาห์ (i % 7 === 0)
     if (i%7===0) {
@@ -687,10 +704,13 @@ function renderCalendar() {
    เปิดร้าน (showName) → selectStore
    task → openMultiPanel
    schedule → selectStoreNoTabSwitch
+   ⚠️ แก้ไข: เดิมเช็ค isTask ด้วยการเทียบ label/lastOrderFrom กับ TASK_ITEMS
+      ซึ่งเสี่ยงผิดถ้า label บังเอิญซ้ำกัน — เปลี่ยนมาเช็คจาก flag item.isTask
+      ที่ระบุไว้ตรงๆ ใน TASK_ITEMS แทน ชัดเจนและปลอดภัยกว่า
    ════════════════════════════════════════════════════════════ */
 function onEventClick(ev) {
-  const isOpen = ev.item?.showName;
-  const isTask = !isOpen && TASK_ITEMS.some(t => t.label===ev.item?.label || (t.lastOrderFrom && ev.item?.lastOrderFrom));
+  const isOpen = !!ev.item?.showName;
+  const isTask = !isOpen && !!ev.item?.isTask;
   const codes  = ev.allStores ? ev.allStores.map(s=>s["Nest Store Code"]) : [ev.store["Nest Store Code"]];
 
   if (isOpen) {
@@ -729,12 +749,15 @@ function openMultiPanel(codes, taskLabel) {
    showStoreAccordion — render accordion ใน detail panel
    ⚠️ accordion เริ่มยุบ (acc-body ไม่มี class show)
       lazy load content เมื่อกดขยาย
+   ⚠️ แก้ไข: เลิกใช้ inline onclick="toggleAcc(this)" ใน HTML string
+      เปลี่ยนมาใช้ addEventListener หลัง build DOM แทน
+      เพื่อความปลอดภัยและไม่พึ่ง global scope ของ inline handler
    ════════════════════════════════════════════════════════════ */
 function showStoreAccordion(codes, title, sub) {
   const infoEl = document.getElementById("detailStoreInfo");
   const tlEl   = document.getElementById("detailTimeline");
-  infoEl.innerHTML = `<div style="font-size:14px;font-weight:500;color:#90CAF9;">${title}</div>
-    <div style="font-size:11px;color:#555;margin-top:2px;">${sub}</div>`;
+  infoEl.innerHTML = `<div style="font-size:14px;font-weight:500;color:#90CAF9;">${escapeHTML(title)}</div>
+    <div style="font-size:11px;color:#555;margin-top:2px;">${escapeHTML(sub)}</div>`;
   tlEl.innerHTML = "";
 
   const tabsEl = document.createElement("div");
@@ -742,17 +765,30 @@ function showStoreAccordion(codes, title, sub) {
   tabsEl.innerHTML = codes.map(code => {
     const s = allStores.find(s=>s["Nest Store Code"]===code);
     if (!s) return "";
-    return `<div class="acc-item" data-code="${code}">
-      <div class="acc-header" onclick="toggleAcc(this)">
+    return `<div class="acc-item" data-code="${escapeHTML(code)}">
+      <div class="acc-header">
         <div class="acc-dot"></div>
-        <span class="acc-name">${s["Store Name"]}</span>
-        <span class="acc-date">${s["Grand Open Date"]||""}</span>
+        <span class="acc-name">${escapeHTML(s["Store Name"])}</span>
+        <span class="acc-date">${escapeHTML(s["Grand Open Date"]||"")}</span>
         <span class="acc-arrow">▶</span>
       </div>
       <div class="acc-body"></div>
     </div>`;
   }).join("");
   tlEl.appendChild(tabsEl);
+
+  // ผูก event listener ให้ทุก acc-header หลังสร้าง DOM เสร็จ
+  tabsEl.querySelectorAll(".acc-header").forEach(header => {
+    header.addEventListener("click", () => toggleAcc(header));
+  });
+}
+
+/* เล็กๆ น้อยๆ: กัน HTML injection จากชื่อร้าน/รหัสที่อาจมีอักขระพิเศษ */
+function escapeHTML(str) {
+  if (str === null || str === undefined) return "";
+  const div = document.createElement("div");
+  div.textContent = String(str);
+  return div.innerHTML;
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -774,7 +810,10 @@ function toggleAcc(header) {
   // lazy load เมื่อเปิดครั้งแรก
   if (!isOpen && !body.innerHTML.trim() && code) {
     const s = allStores.find(s => s["Nest Store Code"] === code);
-    if (s) body.innerHTML = makeStoreDetailHTML(s);
+    if (s) {
+      body.innerHTML = makeStoreDetailHTML(s);
+      bindTaskCheckboxes(body); // ⚠️ ผูก checkbox listener ทันทีหลัง lazy load (เดิมหลุดจุดนี้ไป)
+    }
   }
 
   body.classList.toggle("show", !isOpen);
@@ -789,6 +828,7 @@ function toggleAcc(header) {
    แสดง Schedule เสมอ + Tasks เพิ่มเมื่อ taskUnlocked
    ⚠️ checkbox task ใช้ store_code เป็น id
       ถ้า store_code มีอักขระพิเศษอาจทำให้ querySelector ล้มเหลว
+   ⚠️ แก้ไข: escape ค่าที่แทรกลง HTML (store code / label) ก่อนใส่ใน onchange string
    ════════════════════════════════════════════════════════════ */
 function makeStoreDetailHTML(store) {
   const openD  = parseDate(store["Grand Open Date"]);
@@ -805,7 +845,7 @@ function makeStoreDetailHTML(store) {
     if (!d) return "";
     return `<div class="tl-row">
       <div class="tl-date">${fmtShort(d)}</div>
-      <div class="tl-event ${item.cls}">${item.label}</div>
+      <div class="tl-event ${item.cls}">${escapeHTML(item.label)}</div>
     </div>`;
   }).join("");
 
@@ -823,23 +863,25 @@ function makeStoreDetailHTML(store) {
       const doneBy  = taskCol && taskDoneMap[store["Nest Store Code"]] ? taskDoneMap[store["Nest Store Code"]][taskCol] : "";
       const isDone  = !!doneBy;
       const evCls   = "tl-event color-task" + (isDone?" done":" pending");
+      const safeCode  = escapeHTML(store["Nest Store Code"]);
+      const safeLabel = escapeHTML(item.label).replace(/'/g, "\\'");
       if (taskCol && currentUser) {
         return `<div class="task-cb-row">
-          <input type="checkbox" class="task-cb" ${isDone?"checked":""} 
-            onchange="toggleTaskDone('${store["Nest Store Code"]}','${item.label}',this)">
-          <div class="${evCls}">${item.label}${isDone?` <span class="done-by">(${doneBy})</span>`:""}</div>
+          <input type="checkbox" class="task-cb" ${isDone?"checked":""}
+            data-store-code="${safeCode}" data-task-label="${safeLabel}">
+          <div class="${evCls}">${escapeHTML(item.label)}${isDone?` <span class="done-by">(${escapeHTML(doneBy)})</span>`:""}</div>
         </div>`;
       }
       return `<div class="tl-row">
         <div class="tl-date">${fmtShort(d)}</div>
-        <div class="${evCls}">${item.label}${isDone?` <span class="done-by">(${doneBy})</span>`:""}</div>
+        <div class="${evCls}">${escapeHTML(item.label)}${isDone?` <span class="done-by">(${escapeHTML(doneBy)})</span>`:""}</div>
       </div>`;
     }).join("");
   }
 
   return `
-    <div class="acc-meta">${store["Nest Store Code"]} · DC: ${store["DC Code"]} · ${store["Store Layout"]||"-"} ตรม.</div>
-    <div class="acc-meta">จัด: ${store["Replen Pick Amb"]||"-"} &nbsp;·&nbsp; ส่ง: ${store["Replen Deli Amb"]||"-"}</div>
+    <div class="acc-meta">${escapeHTML(store["Nest Store Code"])} · DC: ${escapeHTML(store["DC Code"])} · ${escapeHTML(store["Store Layout"]||"-")} ตรม.</div>
+    <div class="acc-meta">จัด: ${escapeHTML(store["Replen Pick Amb"]||"-")} &nbsp;·&nbsp; ส่ง: ${escapeHTML(store["Replen Deli Amb"]||"-")}</div>
     ${openD ? `<div class="acc-meta blue">วันเปิด: ${fmtShort(openD)} &nbsp;·&nbsp; Fair: ${fmtShort(openD)}–${fmtShort(fairEnd)}</div>` : ""}
     <div class="tl-section">Schedule</div>
     ${schedRows}
@@ -848,19 +890,48 @@ function makeStoreDetailHTML(store) {
 }
 
 /* ════════════════════════════════════════════════════════════
-   Day Popup
+   bindTaskCheckboxes — ผูก change event ให้ checkbox ของ task
+   ⚠️ ใหม่: แทนที่การฝัง onchange="toggleTaskDone(...)" ตรงๆ ใน HTML string
+      เรียกหลัง render accordion ทุกครั้ง (lazy load + reload)
    ════════════════════════════════════════════════════════════ */
+function bindTaskCheckboxes(container) {
+  container.querySelectorAll(".task-cb").forEach(cb => {
+    cb.addEventListener("change", function() {
+      toggleTaskDone(this.dataset.storeCode, this.dataset.taskLabel, this);
+    });
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
+   Day Popup
+   ⚠️ แก้ไข: เดิมฝัง JSON.stringify(...) ลงใน onclick string โดยตรง
+      ถ้า Store Name มี " หรือ ' จะทำให้ HTML/JS พังทันที (XSS-prone)
+      เปลี่ยนมาเก็บ event ไว้ใน array แล้วอ้างด้วย index ผ่าน data-attribute แทน
+   ════════════════════════════════════════════════════════════ */
+let dayPopupEvents = [];
+
 function showDayPopup(dateStr, events) {
   const p = dateStr.split("-");
   const d = new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
   document.getElementById("dayPopupTitle").textContent = `${d.getDate()} ${THAI_MONTHS_S[d.getMonth()]} ${d.getFullYear()}`;
-  document.getElementById("dayPopupContent").innerHTML = events.map(ev => {
+
+  dayPopupEvents = events; // เก็บ reference จริง ไม่ serialize ผ่าน HTML
+
+  const contentEl = document.getElementById("dayPopupContent");
+  contentEl.innerHTML = events.map((ev, idx) => {
     const isOpen = ev.item?.showName;
-    const label  = isOpen ? `${ev.label}: ${ev.store["Store Name"]}` : ev.label;
-    return `<div class="event ${ev.cls}" style="margin-bottom:4px;cursor:pointer;display:block;"
-      onclick="onEventClick(${JSON.stringify({label:ev.label,cls:ev.cls,store:ev.store,item:ev.item||null,allStores:ev.allStores||null}).replace(/"/g,'&quot;')});document.getElementById('dayPopup').classList.remove('show');"
-    >${label}</div>`;
+    const label  = isOpen ? `${escapeHTML(ev.label)}: ${escapeHTML(ev.store["Store Name"])}` : escapeHTML(ev.label);
+    return `<div class="event ${ev.cls}" style="margin-bottom:4px;cursor:pointer;display:block;" data-idx="${idx}">${label}</div>`;
   }).join("");
+
+  contentEl.querySelectorAll("[data-idx]").forEach(el => {
+    el.addEventListener("click", function() {
+      const ev = dayPopupEvents[parseInt(this.dataset.idx, 10)];
+      document.getElementById("dayPopup").classList.remove("show");
+      if (ev) onEventClick(ev);
+    });
+  });
+
   document.getElementById("dayPopup").classList.add("show");
 }
 
@@ -868,6 +939,8 @@ function showDayPopup(dateStr, events) {
    Password & Task Lock/Unlock
    ⚠️ เมื่อ unlock แล้ว accordion ที่เปิดอยู่ต้องถูก reload
       เพื่อแสดง Tasks ที่เพิ่งปลดล็อค
+   ⚠️ แก้ไข: เพิ่ม confirm popup ก่อน lock เมื่อกด Tasks tab ซ้ำขณะ unlock อยู่
+      (เดิม lock ทันทีไม่ถาม ทำให้ผู้ใช้งงว่าทำไมข้อมูลหาย)
    ════════════════════════════════════════════════════════════ */
 function checkPassword() {
   const pw = document.getElementById("pwInput").value.trim().toLowerCase();
@@ -876,6 +949,7 @@ function checkPassword() {
     currentUser  = pw;
     document.getElementById("tasksTabBtn").textContent = "Tasks ✓";
     document.getElementById("tasksTabBtn").classList.add("unlocked");
+    document.getElementById("tasksTabBtn").title = "กดอีกครั้งเพื่อล็อค";
     closePwPopup();
     // switch ไป Tasks tab
     setTab("tasks");
@@ -890,12 +964,32 @@ function closePwPopup() {
   document.getElementById("pwInput").value = "";
   document.getElementById("pwError").style.display = "none";
 }
+
+function lockTasks() {
+  taskUnlocked = false;
+  currentUser  = null;
+  document.getElementById("tasksTabBtn").textContent = "Tasks 🔒";
+  document.getElementById("tasksTabBtn").classList.remove("unlocked");
+  document.getElementById("tasksTabBtn").title = "ใส่รหัสเพื่อเข้า Tasks";
+  setTab("all");
+}
+
+function showLockConfirm() {
+  document.getElementById("lockConfirmPopup").classList.add("show");
+}
+function closeLockConfirm() {
+  document.getElementById("lockConfirmPopup").classList.remove("show");
+}
+
 function reloadOpenAccordions() {
   document.querySelectorAll(".acc-body.show").forEach(body => {
     const code = body.closest(".acc-item")?.dataset.code;
     if (code) {
       const s = allStores.find(s=>s["Nest Store Code"]===code);
-      if (s) body.innerHTML = makeStoreDetailHTML(s);
+      if (s) {
+        body.innerHTML = makeStoreDetailHTML(s);
+        bindTaskCheckboxes(body);
+      }
     }
   });
 }
@@ -909,10 +1003,10 @@ function toggleTaskDone(storeCode, taskLabel, checkbox) {
   if (!currentUser) return;
   const taskCol = TASK_COL_MAP[taskLabel];
   if (!taskCol) return;
-  const isDone = checkbox.checked;
-  checkbox.checked = !isDone; // revert รอ confirm
+  const wantsDone = checkbox.checked;
+  checkbox.checked = !wantsDone; // revert รอ confirm
 
-  const msg = isDone
+  const msg = wantsDone
     ? `ยืนยันว่า "${taskLabel}" ทำเสร็จแล้ว?`
     : `ยืนยันยกเลิก "${taskLabel}"?`;
 
@@ -920,14 +1014,14 @@ function toggleTaskDone(storeCode, taskLabel, checkbox) {
   document.getElementById("confirmPopup").classList.add("show");
   document.getElementById("confirmYesBtn").onclick = async () => {
     document.getElementById("confirmPopup").classList.remove("show");
-    checkbox.checked = isDone;
+    checkbox.checked = wantsDone;
     try {
       await fetch(WEBAPP_URL, {
         method: "POST",
-        body: JSON.stringify({ action: isDone?"set":"unset", store_code: storeCode, task_col: taskCol, updated_by: currentUser })
+        body: JSON.stringify({ action: wantsDone?"set":"unset", store_code: storeCode, task_col: taskCol, updated_by: currentUser })
       });
       if (!taskDoneMap[storeCode]) taskDoneMap[storeCode] = {};
-      taskDoneMap[storeCode][taskCol] = isDone ? currentUser : "";
+      taskDoneMap[storeCode][taskCol] = wantsDone ? currentUser : "";
       reloadOpenAccordions();
     } catch(e) { console.error("taskDone error:", e); }
   };
@@ -994,6 +1088,7 @@ async function loadData() {
     renderCalendar();
     renderConfig();
   } catch(e) {
+    console.error("loadData error:", e);
     document.getElementById("calGrid").innerHTML="<div class='loading'>โหลดข้อมูลไม่ได้ กรุณา refresh</div>";
   }
 }
@@ -1004,7 +1099,7 @@ async function loadData() {
 function renderConfig() {
   const all = [...SCHEDULE_ITEMS, ...TASK_ITEMS.filter(i=>i.key!=="Grand Open Date")];
   document.getElementById("configBody").innerHTML = all.map(item=>`
-    <tr><td>${item.label}</td><td>
+    <tr><td>${escapeHTML(item.label)}</td><td>
       <select><option>Schedule</option><option>Tasks</option></select>
     </td></tr>
   `).join("");
@@ -1017,8 +1112,13 @@ document.getElementById("prevBtn").addEventListener("click", ()=>{ viewStart.set
 document.getElementById("nextBtn").addEventListener("click", ()=>{ viewStart.setDate(viewStart.getDate()+7); renderCalendar(); });
 
 // Scroll wheel
+// ⚠️ แก้ไข: เดิม preventDefault ทุกครั้งที่ wheel ทั้งหน้า ทำให้ scroll
+// ใน detail panel (ฝั่งซ้าย) ใช้งานไม่ได้เมื่อ content ยาวเกิน
+// เปลี่ยนเป็นเช็คก่อนว่า pointer อยู่เหนือ calendar area หรือไม่
 let scrollCD = false;
+const calGridEl = document.getElementById("calGrid");
 document.addEventListener("wheel", e=>{
+  if (!calGridEl.contains(e.target)) return; // ปล่อยให้ scroll ปกติถ้าไม่ได้อยู่บน calendar
   e.preventDefault();
   if (scrollCD) return;
   scrollCD=true; setTimeout(()=>scrollCD=false,300);
@@ -1049,25 +1149,38 @@ document.getElementById("filterDate").addEventListener("change", function(){
 });
 
 // Tab buttons
+// ⚠️ แก้ไข: กด Tasks tab ซ้ำขณะ unlock อยู่ → เดิม lock ทันทีไม่ถาม
+// ตอนนี้เปลี่ยนเป็นเปิด confirm popup ก่อนเสมอ
 document.querySelectorAll(".tab-btn").forEach(btn=>{
   btn.addEventListener("click", function(){
     const tab = this.dataset.tab;
-    // ⚠️ Tasks ต้อง unlock ก่อน
+    // Tasks ยังไม่ unlock → เปิด password popup
     if (tab==="tasks" && !taskUnlocked) {
       document.getElementById("pwPopup").classList.add("show");
       setTimeout(()=>document.getElementById("pwInput").focus(),100);
       return;
     }
-    // Tasks ที่ unlock แล้ว กดอีกครั้ง = lock
+    // Tasks unlock อยู่แล้ว กดอีกครั้ง → ถาม confirm ก่อน lock
     if (tab==="tasks" && taskUnlocked) {
-      taskUnlocked=false; currentUser=null;
-      document.getElementById("tasksTabBtn").textContent="Tasks 🔒";
-      document.getElementById("tasksTabBtn").classList.remove("unlocked","active");
-      setTab("all"); return;
+      showLockConfirm();
+      return;
     }
     setTab(tab);
   });
 });
+
+// Password popup buttons
+document.getElementById("pwConfirmBtn").addEventListener("click", checkPassword);
+document.getElementById("pwCancelBtn").addEventListener("click", closePwPopup);
+document.getElementById("pwInput").addEventListener("keydown", e=>{ if(e.key==="Enter") checkPassword(); });
+
+// Lock confirm popup buttons
+document.getElementById("lockConfirmYesBtn").addEventListener("click", ()=>{ closeLockConfirm(); lockTasks(); });
+document.getElementById("lockConfirmCancelBtn").addEventListener("click", closeLockConfirm);
+document.getElementById("lockConfirmPopup").addEventListener("click", e=>{ if(e.target===document.getElementById("lockConfirmPopup")) closeLockConfirm(); });
+
+// Confirm popup cancel button (task done)
+document.getElementById("confirmCancelBtn").addEventListener("click", ()=>document.getElementById("confirmPopup").classList.remove("show"));
 
 // Reset
 document.getElementById("resetBtn").addEventListener("click", ()=>{
@@ -1076,6 +1189,7 @@ document.getElementById("resetBtn").addEventListener("click", ()=>{
   taskUnlocked=false; currentUser=null;
   document.getElementById("tasksTabBtn").textContent="Tasks 🔒";
   document.getElementById("tasksTabBtn").classList.remove("unlocked");
+  document.getElementById("tasksTabBtn").title = "ใส่รหัสเพื่อเข้า Tasks";
   document.getElementById("detailStoreInfo").innerHTML='<div class="detail-empty">เลือกร้านเพื่อดูรายละเอียด</div>';
   document.getElementById("detailTimeline").innerHTML="";
   viewStart=getWeekStart(today);
