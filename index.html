@@ -164,7 +164,11 @@ body {
 }
 
 /* Calendar Cell ─────────────────────────── */
-.cal-cell   { border-right: 0.5px solid #f0f0f0; border-bottom: 0.5px solid #f0f0f0; padding: 4px; overflow: hidden; background: #fff; min-height: 80px; }
+.cal-cell   { border-right: 0.5px solid #f0f0f0; border-bottom: 0.5px solid #f0f0f0; padding: 4px; overflow: hidden; background: #fff; min-height: 80px; cursor: pointer; }
+.cal-cell:hover { background: #f5f7ff; }
+.cal-cell.fair-peak:hover   { background: #b8dcba !important; }
+.cal-cell.fair-normal:hover { background: #d9ecda !important; }
+/* ⚠️ day-num และ event ต้อง stopPropagation ไม่งั้นกด event จะ trigger ทั้ง onEventClick และ day-cell click ซ้อนกัน */
 /* ⚠️ fair-peak/fair-normal ใช้ !important เพื่อ override month-even/odd
    ถ้าลบ !important จะถูกสี month ทับ */
 .cal-cell.fair-peak   { background: #C8E6C9 !important; }
@@ -238,6 +242,23 @@ body {
 .day-popup-box { background: #1e1e1e; border: 1px solid #333; border-radius: 10px; padding: 16px; min-width: 240px; max-width: 320px; max-height: 70vh; overflow-y: auto; }
 .day-popup-title { font-size: 14px; font-weight: 500; color: #fff; margin-bottom: 10px; }
 .day-popup-close { float: right; background: none; border: none; font-size: 18px; cursor: pointer; color: #555; margin-top: -2px; }
+
+/* ─── Task Reminder Popup (หลัง unlock password) ────────── */
+.reminder-list   { max-height: 280px; overflow-y: auto; margin-bottom: 4px; text-align: left; }
+.reminder-row     { display: flex; align-items: center; gap: 8px; padding: 7px 4px; border-bottom: 0.5px solid #2a2a2a; }
+.reminder-row:last-child { border-bottom: none; }
+.reminder-store   { font-size: 12px; color: #888; min-width: 70px; flex-shrink: 0; }
+.reminder-task    { font-size: 13px; color: #ddd; flex: 1; }
+.reminder-task.overdue { color: #ef5350; }
+.reminder-badge   { font-size: 10px; padding: 1px 7px; border-radius: 20px; flex-shrink: 0; }
+.reminder-badge.today   { background: #1a2a50; color: #5c6bc0; }
+.reminder-badge.overdue { background: #2a0a0a; color: #ef5350; }
+.reminder-empty   { color: #555; font-size: 13px; text-align: center; padding: 16px 0; }
+
+/* ─── Today badge ใน task list ภายใน accordion ──────────── */
+.task-today-badge { font-size: 9px; background: #1a2a50; color: #5c6bc0; padding: 1px 6px; border-radius: 20px; margin-left: 4px; flex-shrink: 0; }
+.task-overdue-badge { font-size: 9px; background: #2a0a0a; color: #ef5350; padding: 1px 6px; border-radius: 20px; margin-left: 4px; flex-shrink: 0; }
+
 
 /* ─── Config View ────────────────────────────────────────── */
 .config-wrap { padding: 14px; background: #111; overflow-y: auto; flex: 1; }
@@ -377,6 +398,18 @@ body {
     <div class="popup-btns">
       <button class="btn-primary" id="confirmYesBtn">ยืนยัน</button>
       <button class="btn-secondary" id="confirmCancelBtn">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Popup: Task Reminder (หลัง unlock password) ──────── -->
+<!-- ⚠️ ใหม่: เด้งทุกครั้งหลัง checkPassword() สำเร็จ สรุป task วันนี้ + overdue -->
+<div class="popup-bg" id="reminderPopup">
+  <div class="popup-box">
+    <h3 id="reminderTitle">งานที่ต้องทำวันนี้</h3>
+    <div class="reminder-list" id="reminderList"></div>
+    <div class="popup-btns">
+      <button class="btn-primary" id="reminderOkBtn">รับทราบ</button>
     </div>
   </div>
 </div>
@@ -669,6 +702,8 @@ function renderCalendar() {
     if (info?.fairType==="peak")   cell.classList.add("fair-peak");
     if (info?.fairType==="normal") cell.classList.add("fair-normal");
     if (curDate.getDate()===1)     cell.classList.add("new-month-border");
+    // ⚠️ ใหม่: กดวันที่ว่างๆ ในเซลล์ → onDateClick (ดูร้านทั้งหมดของวันนั้นตาม tab ปัจจุบัน)
+    cell.addEventListener("click", () => onDateClick(dateStr));
 
     // วันที่
     const dn=document.createElement("div");
@@ -684,14 +719,15 @@ function renderCalendar() {
         el.className="event "+ev.cls;
         el.textContent = ev.item?.showName ? `${ev.label}: ${ev.store["Store Name"]}` : ev.label;
         el.title = ev.store["Store Name"];
-        el.addEventListener("click", () => onEventClick(ev));
+        // ⚠️ stopPropagation กัน click event ทะลุไปโดน cell.onDateClick ซ้อนกัน
+        el.addEventListener("click", (e) => { e.stopPropagation(); onEventClick(ev); });
         cell.appendChild(el);
       });
       if (info.events.length>maxShow) {
         const more=document.createElement("div");
         more.className="event-more";
         more.textContent=`+${info.events.length-maxShow} more`;
-        more.addEventListener("click", ()=>showDayPopup(dateStr, info.events));
+        more.addEventListener("click", (e)=>{ e.stopPropagation(); showDayPopup(dateStr, info.events); });
         cell.appendChild(more);
       }
     }
@@ -746,14 +782,61 @@ function openMultiPanel(codes, taskLabel) {
 }
 
 /* ════════════════════════════════════════════════════════════
+   onDateClick — ⚠️ ใหม่: กดวันที่ในปฏิทิน (ไม่ใช่กด event ตรงๆ)
+   เปิด panel แสดงร้านทั้งหมดที่มี event ในวันนั้น โดย scope ตาม tab:
+     - Overall  → เฉพาะร้านที่ "เปิดร้าน" วันนั้น
+     - Schedule/Tasks → ทุกร้านที่มี event (schedule หรือ task) วันนั้น
+   ใช้ logic เดียวกับ buildEventMap แต่ดึงเฉพาะ store code ที่ตรงวันที่กด
+   ════════════════════════════════════════════════════════════ */
+function onDateClick(dateStr) {
+  const stores = getFilteredStores();
+  const d = parseDate(dateStr);
+  if (!d) return;
+
+  const codesSet = new Set();
+  const items = currentTab === "all"
+    ? SCHEDULE_ITEMS.filter(i => i.showName) // Overall: เฉพาะ "เปิดร้าน"
+    : getActiveItems();                       // Schedule/Tasks: ทุก item ที่ active อยู่
+
+  stores.forEach(store => {
+    items.forEach(item => {
+      let ed;
+      if (item.lastOrderFrom) {
+        const pd = parseDate(store[item.lastOrderFrom]);
+        if (!pd) return;
+        ed = new Date(pd); ed.setDate(ed.getDate()-1);
+      } else {
+        ed = parseDate(store[item.key]);
+      }
+      if (ed && dateToStr(ed) === dateStr) codesSet.add(store["Nest Store Code"]);
+    });
+  });
+
+  const codes = Array.from(codesSet);
+  if (!codes.length) return; // วันที่ไม่มีอะไรเลย ไม่ต้องเปิด panel เปล่าๆ
+
+  document.getElementById("storeSelect").value = "";
+  const pd = parseDate(dateStr);
+  // ⚠️ ถ้ากดวันนี้พอดี และอยู่ใน Tasks tab → ส่ง onlyToday=true
+  // เพื่อกรองให้เห็นเฉพาะงานที่ due วันนี้/overdue ใน panel นี้
+  const isToday = dateStr === todayStr();
+  const onlyToday = isToday && currentTab === "tasks";
+  const subLabel = onlyToday ? `${codes.length} ร้าน · งานที่ต้องทำวันนี้` : `${codes.length} ร้านที่มีกิจกรรมวันนี้`;
+  showStoreAccordion(codes, fmtShort(pd)+" "+pd.getFullYear(), subLabel, onlyToday);
+}
+
+/* ════════════════════════════════════════════════════════════
    showStoreAccordion — render accordion ใน detail panel
    ⚠️ accordion เริ่มยุบ (acc-body ไม่มี class show)
       lazy load content เมื่อกดขยาย
    ⚠️ แก้ไข: เลิกใช้ inline onclick="toggleAcc(this)" ใน HTML string
       เปลี่ยนมาใช้ addEventListener หลัง build DOM แทน
       เพื่อความปลอดภัยและไม่พึ่ง global scope ของ inline handler
+   ⚠️ ใหม่: onlyToday=true → ทุก accordion item ใน panel นี้แสดงเฉพาะ
+      Tasks ที่ due วันนี้/overdue เท่านั้น (ใช้ data-only-today บน container
+      เพื่อให้ toggleAcc/reloadOpenAccordions อ่านค่ากลับมาได้)
    ════════════════════════════════════════════════════════════ */
-function showStoreAccordion(codes, title, sub) {
+function showStoreAccordion(codes, title, sub, onlyToday) {
   const infoEl = document.getElementById("detailStoreInfo");
   const tlEl   = document.getElementById("detailTimeline");
   infoEl.innerHTML = `<div style="font-size:14px;font-weight:500;color:#90CAF9;">${escapeHTML(title)}</div>
@@ -762,6 +845,7 @@ function showStoreAccordion(codes, title, sub) {
 
   const tabsEl = document.createElement("div");
   tabsEl.className = "store-tabs";
+  if (onlyToday) tabsEl.dataset.onlyToday = "1";
   tabsEl.innerHTML = codes.map(code => {
     const s = allStores.find(s=>s["Nest Store Code"]===code);
     if (!s) return "";
@@ -796,6 +880,8 @@ function escapeHTML(str) {
    ⚠️ lazy load: โหลด content ครั้งแรกที่กด open
       ครั้งต่อไปใช้ content ที่โหลดแล้ว (ไม่ reload)
       ถ้าต้องการ reload ต้องล้าง body.innerHTML ก่อน
+   ⚠️ ใหม่: อ่าน data-only-today จาก .store-tabs container เพื่อส่งต่อ
+      ให้ makeStoreDetailHTML กรอง task เฉพาะวันนี้/overdue
    ════════════════════════════════════════════════════════════ */
 function toggleAcc(header) {
   // ⚠️ หา acc-body ด้วย querySelector แทน nextElementSibling
@@ -806,12 +892,13 @@ function toggleAcc(header) {
 
   const code   = item.dataset.code;
   const isOpen = body.classList.contains("show");
+  const onlyToday = !!item.closest(".store-tabs")?.dataset.onlyToday;
 
   // lazy load เมื่อเปิดครั้งแรก
   if (!isOpen && !body.innerHTML.trim() && code) {
     const s = allStores.find(s => s["Nest Store Code"] === code);
     if (s) {
-      body.innerHTML = makeStoreDetailHTML(s);
+      body.innerHTML = makeStoreDetailHTML(s, onlyToday);
       bindTaskCheckboxes(body); // ⚠️ ผูก checkbox listener ทันทีหลัง lazy load (เดิมหลุดจุดนี้ไป)
     }
   }
@@ -829,8 +916,16 @@ function toggleAcc(header) {
    ⚠️ checkbox task ใช้ store_code เป็น id
       ถ้า store_code มีอักขระพิเศษอาจทำให้ querySelector ล้มเหลว
    ⚠️ แก้ไข: escape ค่าที่แทรกลง HTML (store code / label) ก่อนใส่ใน onchange string
+   ⚠️ ใหม่: onlyToday=true → กรอง Tasks ให้เหลือเฉพาะงานที่ due วันนี้
+      หรือเลยกำหนดแล้วยังไม่ done (overdue) เท่านั้น ใช้กับ panel
+      ที่เปิดจาก "วันนี้" บนปฏิทิน / task reminder popup
    ════════════════════════════════════════════════════════════ */
-function makeStoreDetailHTML(store) {
+function isTaskDueOrOverdue(d) {
+  // true ถ้า due วันนี้พอดี หรือเลยกำหนดมาแล้ว (d <= today)
+  return d <= today;
+}
+
+function makeStoreDetailHTML(store, onlyToday) {
   const openD  = parseDate(store["Grand Open Date"]);
   const fairEnd = openD ? new Date(openD) : null;
   if (fairEnd) fairEnd.setDate(fairEnd.getDate()+13);
@@ -862,6 +957,19 @@ function makeStoreDetailHTML(store) {
       const taskCol = TASK_COL_MAP[item.label];
       const doneBy  = taskCol && taskDoneMap[store["Nest Store Code"]] ? taskDoneMap[store["Nest Store Code"]][taskCol] : "";
       const isDone  = !!doneBy;
+
+      // ⚠️ onlyToday filter: ข้ามงานที่ done แล้ว หรือยังไม่ถึงกำหนด (d > today)
+      if (onlyToday) {
+        if (isDone) return "";
+        if (!isTaskDueOrOverdue(d)) return "";
+      }
+
+      const dStr      = dateToStr(d);
+      const isOverdue = !isDone && dStr !== todayStr() && d < today;
+      const isToday   = !isDone && dStr === todayStr();
+      const badge     = isOverdue ? '<span class="task-overdue-badge">เลยกำหนด</span>'
+                       : isToday   ? '<span class="task-today-badge">วันนี้</span>' : "";
+
       const evCls   = "tl-event color-task" + (isDone?" done":" pending");
       const safeCode  = escapeHTML(store["Nest Store Code"]);
       const safeLabel = escapeHTML(item.label).replace(/'/g, "\\'");
@@ -870,22 +978,27 @@ function makeStoreDetailHTML(store) {
           <input type="checkbox" class="task-cb" ${isDone?"checked":""}
             data-store-code="${safeCode}" data-task-label="${safeLabel}">
           <div class="${evCls}">${escapeHTML(item.label)}${isDone?` <span class="done-by">(${escapeHTML(doneBy)})</span>`:""}</div>
+          ${badge}
         </div>`;
       }
       return `<div class="tl-row">
         <div class="tl-date">${fmtShort(d)}</div>
         <div class="${evCls}">${escapeHTML(item.label)}${isDone?` <span class="done-by">(${escapeHTML(doneBy)})</span>`:""}</div>
+        ${badge}
       </div>`;
     }).join("");
   }
+
+  const taskSectionLabel = onlyToday ? "Tasks (วันนี้ + ค้างเก่า)" : "Tasks";
+  const taskEmptyMsg = onlyToday && taskUnlocked && !taskRows.trim()
+    ? '<div style="font-size:11px;color:#555;padding:4px 0;">— ไม่มีงานที่ต้องทำวันนี้ —</div>' : "";
 
   return `
     <div class="acc-meta">${escapeHTML(store["Nest Store Code"])} · DC: ${escapeHTML(store["DC Code"])} · ${escapeHTML(store["Store Layout"]||"-")} ตรม.</div>
     <div class="acc-meta">จัด: ${escapeHTML(store["Replen Pick Amb"]||"-")} &nbsp;·&nbsp; ส่ง: ${escapeHTML(store["Replen Deli Amb"]||"-")}</div>
     ${openD ? `<div class="acc-meta blue">วันเปิด: ${fmtShort(openD)} &nbsp;·&nbsp; Fair: ${fmtShort(openD)}–${fmtShort(fairEnd)}</div>` : ""}
-    <div class="tl-section">Schedule</div>
-    ${schedRows}
-    ${taskUnlocked ? `<div class="tl-section">Tasks</div>${taskRows}` : ""}
+    ${onlyToday ? "" : `<div class="tl-section">Schedule</div>${schedRows}`}
+    ${taskUnlocked ? `<div class="tl-section">${taskSectionLabel}</div>${taskRows}${taskEmptyMsg}` : ""}
   `;
 }
 
@@ -955,6 +1068,8 @@ function checkPassword() {
     setTab("tasks");
     // reload accordion ที่เปิดอยู่
     reloadOpenAccordions();
+    // ⚠️ ใหม่: เด้ง popup สรุปงานวันนี้ + ค้างเก่าทุกครั้งหลัง unlock สำเร็จ
+    showTaskReminder();
   } else {
     document.getElementById("pwError").style.display = "block";
   }
@@ -981,13 +1096,74 @@ function closeLockConfirm() {
   document.getElementById("lockConfirmPopup").classList.remove("show");
 }
 
+/* ════════════════════════════════════════════════════════════
+   Task Reminder — ⚠️ ใหม่: สรุปงานที่ due วันนี้ + overdue ทุกร้าน
+   เด้งทุกครั้งหลัง unlock password สำเร็จ (ไม่ว่าจะมีงานหรือไม่ก็ตาม)
+   ════════════════════════════════════════════════════════════ */
+function collectTodayReminders() {
+  const rows = [];
+  allStores.forEach(store => {
+    TASK_ITEMS.filter(i => i.key !== "Grand Open Date").forEach(item => {
+      let d;
+      if (item.lastOrderFrom) {
+        const pd = parseDate(store[item.lastOrderFrom]); if (!pd) return;
+        d = new Date(pd); d.setDate(d.getDate()-1);
+      } else { d = parseDate(store[item.key]); }
+      if (!d || !isTaskDueOrOverdue(d)) return;
+
+      const taskCol = TASK_COL_MAP[item.label];
+      const doneBy  = taskCol && taskDoneMap[store["Nest Store Code"]] ? taskDoneMap[store["Nest Store Code"]][taskCol] : "";
+      if (doneBy) return; // ทำเสร็จแล้ว ไม่ต้องเตือน
+
+      const dStr = dateToStr(d);
+      rows.push({
+        storeCode: store["Nest Store Code"],
+        storeName: store["Store Name"],
+        label: item.label,
+        overdue: dStr !== todayStr(),
+        date: d
+      });
+    });
+  });
+  // เรียง: เลยกำหนดก่อน (ค้างนานสุดอยู่บนสุด) แล้วตามด้วยของวันนี้
+  rows.sort((a,b) => a.date - b.date);
+  return rows;
+}
+
+function showTaskReminder() {
+  const rows = collectTodayReminders();
+  const titleEl = document.getElementById("reminderTitle");
+  const listEl  = document.getElementById("reminderList");
+
+  if (!rows.length) {
+    titleEl.textContent = "งานวันนี้";
+    listEl.innerHTML = '<div class="reminder-empty">🎉 ไม่มีงานที่ต้องทำวันนี้</div>';
+  } else {
+    const overdueCount = rows.filter(r=>r.overdue).length;
+    titleEl.textContent = `งานที่ต้องทำวันนี้ (${rows.length})`;
+    listEl.innerHTML = rows.map(r => `
+      <div class="reminder-row">
+        <span class="reminder-store">${escapeHTML(r.storeCode)}</span>
+        <span class="reminder-task${r.overdue?" overdue":""}">${escapeHTML(r.storeName)} — ${escapeHTML(r.label)}</span>
+        ${r.overdue ? '<span class="reminder-badge overdue">เลยกำหนด</span>' : '<span class="reminder-badge today">วันนี้</span>'}
+      </div>
+    `).join("");
+    if (overdueCount > 0) {
+      titleEl.textContent += ` · ค้างเก่า ${overdueCount} งาน`;
+    }
+  }
+  document.getElementById("reminderPopup").classList.add("show");
+}
+
 function reloadOpenAccordions() {
   document.querySelectorAll(".acc-body.show").forEach(body => {
-    const code = body.closest(".acc-item")?.dataset.code;
+    const item = body.closest(".acc-item");
+    const code = item?.dataset.code;
     if (code) {
       const s = allStores.find(s=>s["Nest Store Code"]===code);
       if (s) {
-        body.innerHTML = makeStoreDetailHTML(s);
+        const onlyToday = !!item.closest(".store-tabs")?.dataset.onlyToday;
+        body.innerHTML = makeStoreDetailHTML(s, onlyToday);
         bindTaskCheckboxes(body);
       }
     }
@@ -1178,6 +1354,10 @@ document.getElementById("pwInput").addEventListener("keydown", e=>{ if(e.key==="
 document.getElementById("lockConfirmYesBtn").addEventListener("click", ()=>{ closeLockConfirm(); lockTasks(); });
 document.getElementById("lockConfirmCancelBtn").addEventListener("click", closeLockConfirm);
 document.getElementById("lockConfirmPopup").addEventListener("click", e=>{ if(e.target===document.getElementById("lockConfirmPopup")) closeLockConfirm(); });
+
+// Task reminder popup (หลัง unlock)
+document.getElementById("reminderOkBtn").addEventListener("click", ()=>document.getElementById("reminderPopup").classList.remove("show"));
+document.getElementById("reminderPopup").addEventListener("click", e=>{ if(e.target===document.getElementById("reminderPopup")) document.getElementById("reminderPopup").classList.remove("show"); });
 
 // Confirm popup cancel button (task done)
 document.getElementById("confirmCancelBtn").addEventListener("click", ()=>document.getElementById("confirmPopup").classList.remove("show"));
