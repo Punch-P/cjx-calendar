@@ -515,6 +515,8 @@ let currentTab   = "all";
 let taskUnlocked = false;
 let currentUser  = null;
 let pendingDayPopupEvent = null; // ⚠️ ใหม่: เก็บ event ที่ถูกกดใน day popup แทนการฝัง JSON ใน onclick string
+let taskDonePollTimer = null; // ⚠️ ใหม่: handle ของ setInterval สำหรับ auto-refresh task_done
+let taskWritePending = 0;     // ⚠️ ใหม่: นับจำนวน write request ที่ค้างอยู่ กัน polling แย่งเขียนทับ
 
 const today = new Date(); today.setHours(0,0,0,0);
 function getWeekStart(d) { const x=new Date(d); x.setDate(x.getDate()-x.getDay()); x.setHours(0,0,0,0); return x; }
@@ -1191,6 +1193,7 @@ function toggleTaskDone(storeCode, taskLabel, checkbox) {
   document.getElementById("confirmYesBtn").onclick = async () => {
     document.getElementById("confirmPopup").classList.remove("show");
     checkbox.checked = wantsDone; // optimistic update ระหว่างรอ network
+    taskWritePending++; // ⚠️ บอก polling ว่ามีการเขียนค้างอยู่ ให้รอรอบนี้ก่อน
     try {
       const res = await fetch(WEBAPP_URL, {
         method: "POST",
@@ -1213,6 +1216,8 @@ function toggleTaskDone(storeCode, taskLabel, checkbox) {
       // ค้างแสดงผลผิดจากที่ Sheet จริงๆ เป็น
       checkbox.checked = !wantsDone;
       alert("บันทึกไม่สำเร็จ: " + e.message + "\nกรุณาลองใหม่อีกครั้ง");
+    } finally {
+      taskWritePending--; // ลด counter เสมอไม่ว่าสำเร็จหรือ error
     }
   };
 }
@@ -1244,7 +1249,7 @@ function setTab(tab) {
    ════════════════════════════════════════════════════════════ */
 let taskDoneLoadFailed = false; // ใช้บอก UI ว่า task_done โหลดไม่สำเร็จรอบล่าสุด
 
-async function loadTaskDone() {
+async function loadTaskDone(silent) {
   try {
     const res = await fetch(TASK_DONE_CSV_URL+"&t="+Date.now());
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
@@ -1255,9 +1260,46 @@ async function loadTaskDone() {
     taskDoneLoadFailed = false;
   } catch(e) {
     console.error("task_done load failed:", e);
-    taskDoneLoadFailed = true;
-    // ⚠️ ไม่ throw ต่อ เพื่อให้ loadData() ยังโหลด calendar_data ต่อได้
-    // (task_done ใช้แค่แสดงสถานะ done/pending ไม่ใช่ข้อมูลหลักของปฏิทิน)
+    // ⚠️ silent=true (เรียกจาก polling) → ไม่ตั้ง taskDoneLoadFailed
+    // เพราะไม่อยากให้ warning banner กระพริบขึ้นทุกครั้งที่ polling พลาดชั่วคราว
+    // (เช่น เน็ตสะดุดแป๊บเดียว) จะตั้ง flag เฉพาะตอน initial load เท่านั้น
+    if (!silent) taskDoneLoadFailed = true;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   Task Done Auto-Refresh (polling) — ⚠️ ใหม่
+   ดึง task_done ใหม่ทุก 1 นาทีแบบเงียบๆ ไม่รบกวน UI ที่ user
+   กำลังโต้ตอบอยู่ เพื่อลดโอกาส "เห็นสถานะเก่าแล้วกดทับคนอื่นโดยไม่รู้ตัว"
+   ⚠️ ข้าม refresh รอบนั้นถ้า confirmPopup (popup ยืนยัน task done) เปิดอยู่
+      กันไม่ให้ reloadOpenAccordions() ไปขยับ DOM ขณะ user กำลังจะกดยืนยัน
+   ════════════════════════════════════════════════════════════ */
+const TASK_DONE_POLL_INTERVAL_MS = 60 * 1000; // 1 นาที
+
+async function pollTaskDoneOnce() {
+  // ข้ามรอบนี้ถ้า popup ยืนยัน task กำลังเปิดอยู่ (user กำลังตัดสินใจ)
+  const confirmOpen = document.getElementById("confirmPopup")?.classList.contains("show");
+  if (confirmOpen) return;
+  // ⚠️ ข้ามรอบนี้ถ้ามี write request ค้างอยู่ (กันโหลด taskDoneMap ใหม่ทับ
+  // ค่าที่เพิ่งเขียนไปสดๆ ก่อนที่ optimistic update จะอัปเดต memory เสร็จ)
+  if (taskWritePending > 0) return;
+
+  await loadTaskDone(/* silent */ true);
+
+  // อัปเดตเฉพาะ accordion ที่เปิดอยู่ตอนนี้ ถ้า taskUnlocked เท่านั้น
+  // (ถ้ายัง lock อยู่ Tasks section ไม่ได้แสดงผลอะไรที่ต้อง refresh)
+  if (taskUnlocked) reloadOpenAccordions();
+}
+
+function startTaskDonePolling() {
+  if (taskDonePollTimer) return; // กันสร้างซ้ำซ้อนถ้าเรียกมากกว่า 1 ครั้ง
+  taskDonePollTimer = setInterval(pollTaskDoneOnce, TASK_DONE_POLL_INTERVAL_MS);
+}
+
+function stopTaskDonePolling() {
+  if (taskDonePollTimer) {
+    clearInterval(taskDonePollTimer);
+    taskDonePollTimer = null;
   }
 }
 
@@ -1299,6 +1341,9 @@ async function loadData() {
       const cnt = document.getElementById("storeCount");
       cnt.innerHTML += ' <span style="color:#ef5350;">⚠ โหลดสถานะ Task ไม่สำเร็จ — ข้อมูล done/pending อาจไม่อัปเดต</span>';
     }
+
+    // ⚠️ ใหม่: เริ่ม auto-refresh task_done ทุก 1 นาที หลังโหลดข้อมูลครั้งแรกสำเร็จ
+    startTaskDonePolling();
   } catch(e) {
     console.error("loadData error:", e);
     document.getElementById("calGrid").innerHTML="<div class='loading'>โหลดข้อมูลไม่ได้ กรุณา refresh<br><span style='font-size:11px;color:#666;'>"+escapeHTML(e.message)+"</span></div>";
