@@ -6,100 +6,185 @@
 <title>CJX First Lot Calendar</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500&display=swap" rel="stylesheet">
 <style>
+/* ─── Reset ─────────────────────────────────────────────── */
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; font-size: 14px; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+body {
+  font-family: 'Sarabun', sans-serif;
+  font-size: 14px;
+  background: #111;
+  color: #ccc;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  /* ⚠️ position:relative จำเป็นสำหรับ popup overlay */
+  position: relative;
+}
+/* popup ต้องอยู่เหนือทุกอย่าง ใช้ fixed + z-index สูงสุด */
 
-.header { background: #0d0d0d; color: white; padding: 10px 20px; display: flex; align-items: center; border-bottom: 1px solid #222; flex-shrink: 0; }
-.header-title { font-size: 15px; font-weight: 500; color: #ffffff; }
-.header-sub { font-size: 11px; opacity: 0.8; margin-top: 1px; color: #ccc; }
+/* ─── Layout Shell ───────────────────────────────────────── */
+.header { background: #0d0d0d; color: #fff; padding: 10px 20px; border-bottom: 1px solid #222; flex-shrink: 0; }
+.header-title { font-size: 15px; font-weight: 500; }
+.header-sub   { font-size: 11px; opacity: 0.45; margin-top: 1px; }
 
-.top-bar { background: #161616; padding: 8px 16px; border-bottom: 1px solid #222; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex-shrink: 0; }
-.top-bar select { border: 1px solid #333; border-radius: 6px; padding: 5px 10px; font-size: 13px; font-family: 'Sarabun', sans-serif; outline: none; background: #1e1e1e; color: #e0e0e0; }
+.top-bar {
+  background: #161616; padding: 8px 16px;
+  border-bottom: 1px solid #222;
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.top-bar select {
+  border: 1px solid #333; border-radius: 6px; padding: 5px 10px;
+  font-size: 13px; font-family: 'Sarabun', sans-serif;
+  outline: none; background: #1e1e1e; color: #ccc;
+}
 .top-bar select:focus { border-color: #5c6bc0; }
-.view-tabs { display: flex; gap: 4px; margin-left: auto; }
-.tab-btn { padding: 5px 12px; border: 1px solid #333; border-radius: 6px; background: #1e1e1e; cursor: pointer; font-size: 13px; font-family: 'Sarabun', sans-serif; color: #bbb; }
-.tab-btn.active { background: #5c6bc0; color: white; border-color: #5c6bc0; }
-.reset-btn { padding: 5px 12px; border: 1px solid #c62828; border-radius: 6px; background: #1e1e1e; cursor: pointer; font-size: 13px; font-family: 'Sarabun', sans-serif; color: #ef5350; }
+.reset-btn {
+  padding: 5px 12px; border: 1px solid #c62828; border-radius: 6px;
+  background: #1e1e1e; color: #ef5350;
+  font-size: 13px; font-family: 'Sarabun', sans-serif; cursor: pointer;
+}
 .reset-btn:hover { background: #2a0a0a; }
 
-.legend { background: #161616; padding: 6px 16px; border-bottom: 1px solid #222; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; flex-shrink: 0; }
+/* ─── Tab Buttons ────────────────────────────────────────── */
+.view-tabs { display: flex; gap: 4px; margin-left: auto; }
+.tab-btn {
+  padding: 5px 14px; border: 1px solid #333; border-radius: 6px;
+  background: #1e1e1e; color: #888;
+  font-size: 13px; font-family: 'Sarabun', sans-serif; cursor: pointer;
+}
+.tab-btn.active   { background: #5c6bc0; color: #fff; border-color: #5c6bc0; }
+.tab-btn.unlocked { border-color: #43a047; color: #81c784; }
+/* ⚠️ Tasks tab จะมี 🔒 หรือ ✓ ต่อท้าย อย่าลืมอัปเดตเมื่อ lock/unlock */
+
+/* ─── Legend ─────────────────────────────────────────────── */
+.legend {
+  background: #161616; padding: 6px 16px; border-bottom: 1px solid #222;
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center; flex-shrink: 0;
+}
 .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #aaa; }
-.legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.legend-dot  { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
 
-.store-count { font-size: 11px; color: #999; padding: 4px 16px; background: #161616; border-bottom: 1px solid #222; flex-shrink: 0; }
+/* ─── Store Count Bar ────────────────────────────────────── */
+.store-count {
+  font-size: 11px; color: #666; padding: 4px 16px;
+  background: #161616; border-bottom: 1px solid #222; flex-shrink: 0;
+}
 
+/* ─── Main Layout (Panel + Resizer + Calendar) ───────────── */
 .main-layout { display: flex; flex: 1; overflow: hidden; }
-.resizer { width: 4px; background: #333; cursor: col-resize; flex-shrink: 0; transition: background 0.2s; }
+
+/* ─── Detail Panel (ซ้าย) ───────────────────────────────── */
+.detail-panel {
+  width: 260px; min-width: 160px; max-width: 500px;
+  border-right: 1px solid #222;
+  display: flex; flex-direction: column;
+  background: #141414; overflow: hidden; flex-shrink: 0;
+}
+.detail-store-info {
+  background: #1a1a1a; padding: 14px 16px;
+  border-bottom: 1px solid #222; flex: 0 0 auto; overflow-y: auto;
+}
+.detail-store-name  { font-size: 18px; font-weight: 500; color: #fff; margin-bottom: 6px; }
+.detail-store-meta  { font-size: 13px; color: #bbb; margin-bottom: 5px; line-height: 1.5; }
+.detail-chips       { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.detail-chip        { font-size: 12px; padding: 3px 10px; border-radius: 4px; line-height: 1.5; }
+.detail-timeline    { padding: 8px 12px; overflow-y: auto; flex: 1; }
+.detail-fair        { padding: 8px 16px; border-bottom: 1px solid #222; flex-shrink: 0; }
+.detail-empty       { color: #555; font-size: 12px; padding: 20px 0; text-align: center; }
+
+/* ─── Accordion (store list) ─────────────────────────────── */
+/* ⚠️ Bug zone: acc-body ต้องเริ่ม display:none เสมอ
+   ถ้าตั้งค่าผิด content จะโผล่ทันทีโดยไม่กดอะไร */
+.store-tabs     { display: flex; flex-direction: column; gap: 4px; padding: 8px; overflow-y: auto; flex: 1; }
+.acc-item       { border: 0.5px solid #333; border-radius: 8px; overflow: hidden; transition: border-color 0.15s; }
+.acc-item.open-item { border-color: #5c6bc0; }
+.acc-header     {
+  padding: 10px 12px; display: flex; align-items: center; gap: 8px;
+  cursor: pointer; background: #1e1e1e; user-select: none;
+}
+.acc-header:hover   { background: #252525; }
+.acc-header.open    { background: #0d1533; }
+.acc-dot            { width: 8px; height: 8px; border-radius: 50%; background: #37474F; flex-shrink: 0; }
+.acc-header.open .acc-dot  { background: #90CAF9; }
+.acc-name           { flex: 1; font-weight: 500; font-size: 13px; color: #ccc; }
+.acc-header.open .acc-name { color: #90CAF9; }
+.acc-date           { font-size: 10px; color: #555; padding: 2px 7px; border-radius: 20px; background: #1a1a1a; flex-shrink: 0; }
+.acc-header.open .acc-date { background: #1a2a50; color: #5c6bc0; }
+.acc-arrow          { font-size: 10px; color: #555; flex-shrink: 0; }
+.acc-header.open .acc-arrow { color: #5c6bc0; }
+/* ⚠️ acc-body ต้อง display:none เสมอ show class ค่อยเปิด */
+.acc-body           { display: none; padding: 10px 12px; background: #0a0f1f; border-top: 0.5px solid #1a2040; }
+.acc-body.show      { display: block; }
+.acc-meta           { font-size: 11px; color: #666; margin-bottom: 3px; }
+.acc-meta.blue      { color: #90CAF9; }
+
+/* ─── Timeline Rows ──────────────────────────────────────── */
+.tl-section { font-size: 10px; font-weight: 500; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0 5px; }
+.tl-row     { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.tl-date    { width: 54px; font-size: 11px; color: #aaa; flex-shrink: 0; }
+.tl-event   { border-radius: 3px; padding: 2px 7px; font-size: 12px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ─── Task Checkbox Row ──────────────────────────────────── */
+.task-cb-row  { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.task-cb      { width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; accent-color: #5c6bc0; }
+.tl-event.done    { opacity: 0.45; text-decoration: line-through; }
+.tl-event.pending { border: 1.5px solid #e53935 !important; }
+.done-by      { font-size: 10px; color: #555; margin-left: 2px; }
+
+/* ─── Resizer ────────────────────────────────────────────── */
+.resizer { width: 4px; background: #222; cursor: col-resize; flex-shrink: 0; }
 .resizer:hover { background: #5c6bc0; }
 
-/* ซ้าย 30% detail panel */
-.detail-panel { width: 220px; min-width: 120px; max-width: 500px; border-right: 1px solid #222; display: flex; flex-direction: column; background: #141414; overflow: hidden; flex-shrink: 0; }
-.detail-store-info { background: #1a1a1a; padding: 16px 16px; border-bottom: 1px solid #222; flex: 0 0 auto; overflow-y: auto; }
-.detail-store-name { font-size: 20px; font-weight: 500; color: #fff; margin-bottom: 8px; }
-.detail-store-meta { font-size: 14px; color: #ccc; margin-bottom: 6px; line-height: 1.6; }
-.detail-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.detail-chip { font-size: 13px; padding: 5px 12px; border-radius: 6px; line-height: 1.5; }
-.detail-timeline { padding: 10px 14px; overflow-y: auto; flex: 1; border-top: 1px solid #222; overflow-y: auto; }
-.tl-section { font-size: 11px; font-weight: 500; color: #999; letter-spacing: 0.5px; text-transform: uppercase; margin: 8px 0 5px; }
-.tl-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-.tl-date { width: 56px; font-size: 12px; color: #ccc; flex-shrink: 0; }
-.tl-event { border-radius: 3px; padding: 3px 8px; font-size: 12px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-.tl-event-task { background: #0d1f2d; color: #90CAF9; border-left: 3px solid #42A5F5; border-radius: 3px; padding: 3px 8px; font-size: 12px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-.tl-event-task { background: #FFF9C4; color: #E65100; border-left: 3px solid #FFE082; border-radius: 3px; padding: 3px 8px; font-size: 12px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-.tl-event:hover { opacity: 0.8; }
-.detail-empty { color: #888; font-size: 12px; padding: 20px 0; text-align: center; }
-.detail-fair { padding: 10px 16px; border-bottom: 1px solid #222; flex-shrink: 0; }
-.fair-title { font-size: 11px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-.fair-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
-.fair-label { color: #888; }
-.fair-val { color: #ddd; font-weight: 500; }
-.fair-title { font-size: 11px; font-weight: 500; color: #999; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-.fair-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
-.fair-label { color: #888; }
-.fair-val { color: #fff; font-weight: 500; }
-
-/* ขวา 70% ปฏิทิน */
-.cal-side { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; background: #fff; color: #2c2c2c; }
-.nav-bar { background: #f9f9f9; padding: 6px 16px; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.nav-btn { background: #e8e8e8; border: 1px solid #bbb; border-radius: 6px; padding: 4px 12px; cursor: pointer; font-size: 16px; color: #111; font-weight: 500; }
-.nav-btn:hover { background: #e0e0e0; }
+/* ─── Calendar Side (ขวา) ───────────────────────────────── */
+.cal-side { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #fff; overflow: hidden; }
+.nav-bar  {
+  background: #f9f9f9; padding: 6px 16px; border-bottom: 1px solid #e0e0e0;
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+.nav-btn { background: #e8e8e8; border: 1px solid #bbb; border-radius: 6px; padding: 4px 12px; cursor: pointer; font-size: 16px; color: #111; }
+.nav-btn:hover { background: #ddd; }
 .month-label { font-size: 15px; font-weight: 500; color: #111; min-width: 160px; }
 
-.calendar { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+/* ─── Calendar Grid ──────────────────────────────────────── */
+/* ⚠️ grid-template-columns ต้องมี 8 columns (1 month-col + 7 วัน)
+   ถ้าเปลี่ยนจำนวน column ต้องแก้ day-headers ด้วย */
 .day-headers { display: grid; grid-template-columns: 36px repeat(7,1fr); background: #f9f9f9; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; }
-.day-header { padding: 6px; text-align: center; font-size: 12px; font-weight: 500; color: #888; }
+.day-header  { padding: 6px; text-align: center; font-size: 12px; font-weight: 500; color: #888; }
 .day-header.sun { color: #e53935; }
 .day-header.sat { color: #1e88e5; }
 
-.cal-grid { display: grid; grid-template-columns: 36px repeat(7, 1fr); flex: 1; }
-.week-month-bar { display: none; }
+.cal-grid    { display: grid; grid-template-columns: 36px repeat(7,1fr); flex: 1; }
 
-.cal-cell { border-right: 0.5px solid #f0f0f0; border-bottom: 0.5px solid #f0f0f0; padding: 5px; overflow: hidden; min-height: 80px; background: white; }
+/* Month column ───────────────────────────── */
+.month-col {
+  background: #f5f5f5; border-right: 1px solid #e0e0e0; border-bottom: 0.5px solid #f0f0f0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; color: #aaa; writing-mode: vertical-rl;
+}
 
-
-.month-even { background: #ffffff; }
-.month-odd  { background: #f5f5f5; }
-.cal-cell.fair-peak  { background: #C8E6C9 !important; }
+/* Calendar Cell ─────────────────────────── */
+.cal-cell   { border-right: 0.5px solid #f0f0f0; border-bottom: 0.5px solid #f0f0f0; padding: 4px; overflow: hidden; background: #fff; min-height: 80px; }
+/* ⚠️ fair-peak/fair-normal ใช้ !important เพื่อ override month-even/odd
+   ถ้าลบ !important จะถูกสี month ทับ */
+.cal-cell.fair-peak   { background: #C8E6C9 !important; }
 .cal-cell.fair-normal { background: #E8F5E9 !important; }
-.cal-cell.is-today   { background: #fff5f5 !important; outline: 2px solid #e53935; outline-offset: -2px; }
+.cal-cell.is-today    { background: #fff5f5 !important; outline: 2px solid #e53935; outline-offset: -2px; }
+.month-even { background: #ffffff; }
+.month-odd  { background: #f8f8f8; }
 
-.week-month-bar { display: none; }
-
-
-.new-month-border { border-left: 2px solid #5c6bc0 !important; }
-
-.month-col { background: #1a1a1a; border-right: 1px solid #333; border-bottom: 0.5px solid #1e1e1e; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #666; font-weight: 500; writing-mode: vertical-rl; text-orientation: mixed; }
-.day-num { font-size: 13px; font-weight: 500; color: #444; margin-bottom: 3px; display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center; border-radius: 50%; }
-.day-num.today { background: #e53935 !important; color: white !important; font-weight: 700 !important; }
+.day-num    { font-size: 13px; font-weight: 500; color: #444; margin-bottom: 3px; display: inline-flex; width: 24px; height: 24px; align-items: center; justify-content: center; border-radius: 50%; }
+.day-num.today { background: #e53935 !important; color: #fff !important; font-weight: 700 !important; }
 .day-num.sun { color: #e53935; }
 .day-num.sat { color: #1e88e5; }
-.other-month .day-num { color: #333 !important; }
 
-.event { border-radius: 3px; padding: 1px 5px; font-size: 11px; margin-bottom: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.9; }
-.event:hover { opacity: 1; }
-.event-more { font-size: 11px; color: #5c6bc0; padding: 1px 4px; cursor: pointer; font-weight: 500; }
+/* ─── Calendar Events ────────────────────────────────────── */
+.event      { border-radius: 3px; padding: 2px 6px; font-size: 12px; margin-bottom: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; display: inline-block; max-width: 100%; }
+.event:hover { opacity: 0.8; }
+.event-more  { font-size: 11px; color: #5c6bc0; padding: 1px 4px; cursor: pointer; font-weight: 500; }
 .event-more:hover { text-decoration: underline; }
 
+/* ─── Event Colors (pastel light) ───────────────────────── */
 .color-food-pick    { background: #BBDEFB; color: #0D47A1; }
 .color-food-del     { background: #64B5F6; color: #0D47A1; }
 .color-store-pick   { background: #C8E6C9; color: #1B5E20; }
@@ -115,64 +200,86 @@ body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; fon
 .color-chill-pick   { background: #DCEDC8; color: #33691E; }
 .color-chill-del    { background: #AED581; color: #33691E; }
 .color-open         { background: #37474F; color: #FFFFFF; }
+/* ⚠️ color-task ใช้ทั้งใน calendar และ accordion
+   ถ้าเปลี่ยนสีต้องเปลี่ยนที่ tl-event-task ด้วย */
 .color-task         { background: #FFF9C4; color: #E65100; border: 1px solid #FFE082; }
-.color-task-lo      { background: #F3E5F5; color: #6A1B9A; border: 1px solid #CE93D8; }
-.tl-event-tasklo    { background: #1a0d2a; color: #CE93D8; border-left: 3px solid #AB47BC; border-radius: 3px; padding: 3px 8px; font-size: 12px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.tl-event-task      { background: #FFF9C4; color: #E65100; border-left: 3px solid #FFE082; }
 
-.loading { text-align: center; padding: 50px; color: #444; font-size: 14px; }
+/* ─── Popups ─────────────────────────────────────────────── */
+/* ⚠️ popup ทุกตัวใช้ position:fixed z-index สูง
+   ถ้า parent มี transform CSS popup อาจหลุดออกนอกจอ */
+.popup-bg {
+  display: none;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 9999;
+  align-items: center; justify-content: center;
+}
+.popup-bg.show { display: flex !important; }
+.popup-box {
+  background: #1e1e1e; border: 1px solid #333; border-radius: 12px;
+  padding: 24px; min-width: 300px; max-width: 400px; width: 90%;
+}
+.popup-box h3 { color: #fff; font-size: 15px; font-weight: 500; margin-bottom: 14px; text-align: center; }
+.popup-box p  { color: #bbb; font-size: 14px; margin-bottom: 16px; text-align: center; line-height: 1.6; }
+.pw-input  {
+  width: 100%; padding: 8px 12px; background: #111; border: 1px solid #333;
+  border-radius: 8px; color: #ccc; font-size: 14px; font-family: 'Sarabun', sans-serif;
+  margin-bottom: 6px; outline: none;
+}
+.pw-input:focus { border-color: #5c6bc0; }
+.pw-error  { color: #ef5350; font-size: 12px; margin-bottom: 8px; display: none; }
+.popup-btns { display: flex; gap: 8px; justify-content: center; margin-top: 4px; }
+.btn-primary { padding: 8px 22px; background: #5c6bc0; border: none; border-radius: 8px; color: #fff; font-size: 13px; font-family: 'Sarabun', sans-serif; cursor: pointer; }
+.btn-secondary { padding: 8px 22px; background: #1a1a1a; border: 1px solid #444; border-radius: 8px; color: #aaa; font-size: 13px; font-family: 'Sarabun', sans-serif; cursor: pointer; }
+.btn-danger { padding: 8px 22px; background: #1b0000; border: 1px solid #c62828; border-radius: 8px; color: #ef5350; font-size: 13px; font-family: 'Sarabun', sans-serif; cursor: pointer; }
 
-.day-popup-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 300; align-items: center; justify-content: center; }
-.day-popup-bg.show { display: flex; }
-.day-popup { background: #ffffff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px; min-width: 240px; max-width: 320px; max-height: 70vh; overflow-y: auto; }
-.day-popup-title { font-size: 14px; font-weight: 500; margin-bottom: 10px; color: #1a1a2e; }
-.day-popup-close { float: right; background: none; border: none; font-size: 18px; cursor: pointer; color: #aaa; margin-top: -4px; }
+/* ─── Day Popup ──────────────────────────────────────────── */
+.day-popup-box { background: #1e1e1e; border: 1px solid #333; border-radius: 10px; padding: 16px; min-width: 240px; max-width: 320px; max-height: 70vh; overflow-y: auto; }
+.day-popup-title { font-size: 14px; font-weight: 500; color: #fff; margin-bottom: 10px; }
+.day-popup-close { float: right; background: none; border: none; font-size: 18px; cursor: pointer; color: #555; margin-top: -2px; }
 
-.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; align-items: center; justify-content: center; }
-.modal-bg.show { display: flex; }
-.modal { background: #1e1e1e; border: 1px solid #333; border-radius: 12px; padding: 20px; max-width: 460px; width: 92%; max-height: 85vh; overflow-y: auto; }
-.modal-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
-.modal-title { font-size: 16px; font-weight: 500; color: #fff; }
-.modal-sub { font-size: 12px; color: #555; margin-top: 2px; }
-.modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #555; line-height: 1; }
-.modal-section { font-size: 11px; font-weight: 500; color: #888; letter-spacing: 0.5px; margin: 12px 0 6px; text-transform: uppercase; }
-.modal-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 0.5px solid #222; font-size: 13px; }
-.modal-row:last-child { border-bottom: none; }
-.modal-key { color: #aaa; }
-.modal-val { font-weight: 500; color: #e0e0e0; }
-
-.config-wrap { padding: 14px; background: #111; }
-.config-title { font-size: 14px; font-weight: 500; margin-bottom: 10px; color: #e0e0e0; }
+/* ─── Config View ────────────────────────────────────────── */
+.config-wrap { padding: 14px; background: #111; overflow-y: auto; flex: 1; }
 .config-table { width: 100%; border-collapse: collapse; background: #1e1e1e; border-radius: 10px; overflow: hidden; border: 1px solid #333; }
 .config-table th { background: #161616; padding: 10px 14px; text-align: left; font-size: 12px; color: #555; font-weight: 500; }
-.config-table td { padding: 8px 14px; border-top: 0.5px solid #222; font-size: 13px; color: #ccc; }
-.config-table select { border: 1px solid #333; border-radius: 4px; padding: 3px 8px; font-size: 12px; font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; }
+.config-table td { padding: 8px 14px; border-top: 0.5px solid #222; font-size: 13px; color: #aaa; }
+.config-table select { border: 1px solid #333; border-radius: 4px; padding: 3px 8px; font-size: 12px; font-family: 'Sarabun', sans-serif; background: #111; color: #ccc; }
+
+.loading { text-align: center; padding: 50px; color: #444; font-size: 14px; }
 </style>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
 
+<!-- ─── Header ───────────────────────────────────────────── -->
 <div class="header">
-  <div>
-    <div class="header-title">CJX First Lot Calendar</div>
-    <div class="header-sub">ปฏิทินร้านใหม่ — อัปเดตอัตโนมัติทุกวัน</div>
-  </div>
+  <div class="header-title">CJX First Lot Calendar</div>
+  <div class="header-sub">ปฏิทินร้านใหม่ — อัปเดตอัตโนมัติทุกวัน</div>
 </div>
 
+<!-- ─── Top Bar ───────────────────────────────────────────── -->
 <div class="top-bar">
-  <select id="storeSelect" style="width:260px">
+  <!-- Filter ร้าน -->
+  <select id="storeSelect" style="width:240px">
     <option value="">-- ทุกร้าน --</option>
   </select>
-  <select id="filterDate" style="min-width:180px;">
+  <!-- Filter วันเปิดร้าน (เฉพาะวันที่มีร้านเปิด) -->
+  <select id="filterDate">
     <option value="">วันเปิดร้าน: ทั้งหมด</option>
   </select>
   <button class="reset-btn" id="resetBtn">↺ Reset</button>
+  <!-- Tabs: Overall / Schedule / Tasks / จัดกลุ่ม -->
   <div class="view-tabs">
     <button class="tab-btn active" data-tab="all">Overall</button>
     <button class="tab-btn" data-tab="schedule">Schedule</button>
-    <button class="tab-btn" data-tab="tasks">Tasks</button>
+    <!-- ⚠️ Tasks tab — ต้องใส่รหัสก่อนถึงจะเข้าได้ -->
+    <button class="tab-btn" data-tab="tasks" id="tasksTabBtn">Tasks 🔒</button>
     <button class="tab-btn" data-tab="config">⚙ จัดกลุ่ม</button>
   </div>
 </div>
 
+<!-- ─── Legend ────────────────────────────────────────────── -->
 <div class="legend">
   <div class="legend-item"><div class="legend-dot" style="background:#BBDEFB"></div>Food</div>
   <div class="legend-item"><div class="legend-dot" style="background:#C8E6C9"></div>Store Use</div>
@@ -189,29 +296,31 @@ body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; fon
 
 <div class="store-count" id="storeCount"></div>
 
+<!-- ─── Main Layout ───────────────────────────────────────── -->
 <div class="main-layout">
 
-  <!-- ซ้าย: detail panel -->
+  <!-- Panel ซ้าย: detail accordion -->
   <div class="detail-panel" id="detailPanel">
     <div class="detail-store-info" id="detailStoreInfo">
-      <div class="detail-empty">เลือกร้านเพื่อดูรายละเอียด</div>
+      <div class="detail-empty">เลือกร้านหรือวันที่เพื่อดูรายละเอียด</div>
     </div>
-    <div class="detail-fair" id="detailFair"></div>
     <div class="detail-timeline" id="detailTimeline"></div>
   </div>
 
+  <!-- Resizer: ลาก resize panel -->
   <div class="resizer" id="resizer"></div>
 
-  <!-- ขวา: ปฏิทิน -->
-  <div class="cal-side" id="calView">
+  <!-- Calendar หรือ Config view -->
+  <div id="calView" style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;">
     <div class="nav-bar">
-      <button class="nav-btn" id="prevMonth">&#8249;</button>
+      <button class="nav-btn" id="prevBtn">&#8249;</button>
       <div class="month-label" id="monthLabel"></div>
-      <button class="nav-btn" id="nextMonth">&#8250;</button>
+      <button class="nav-btn" id="nextBtn">&#8250;</button>
     </div>
-    <div class="calendar">
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
       <div class="day-headers">
-        <div class="day-header" style="background:#0d0d0d;"></div><div class="day-header sun">อา</div>
+        <div class="day-header"></div>
+        <div class="day-header sun">อา</div>
         <div class="day-header">จ</div>
         <div class="day-header">อ</div>
         <div class="day-header">พ</div>
@@ -219,16 +328,14 @@ body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; fon
         <div class="day-header">ศ</div>
         <div class="day-header sat">ส</div>
       </div>
-      <div class="cal-grid" id="calGrid">
+      <div class="cal-grid" id="calGrid" style="flex:1;">
         <div class="loading">กำลังโหลดข้อมูล...</div>
       </div>
     </div>
   </div>
 
-  <!-- config view -->
-  <div id="configView" style="display:none; flex:1; overflow-y:auto;">
+  <div id="configView" style="display:none;flex:1;overflow:hidden;">
     <div class="config-wrap">
-      <div class="config-title">จัดกลุ่ม Schedule / Tasks</div>
       <table class="config-table">
         <thead><tr><th>รายการ</th><th>กลุ่ม</th></tr></thead>
         <tbody id="configBody"></tbody>
@@ -236,63 +343,140 @@ body { font-family: 'Sarabun', sans-serif; background: #111; color: #e0e0e0; fon
     </div>
   </div>
 
-</div>
+</div><!-- end main-layout -->
 
-<!-- Confirm popup -->
-<div class="pw-popup-bg" id="pwPopupBg">
-  <div class="pw-popup">
+<!-- ─── Popup: Password (Tasks) ──────────────────────────── -->
+<div class="popup-bg" id="pwPopup">
+  <div class="popup-box">
     <h3>ใส่รหัสเพื่อเข้า Tasks</h3>
-    <input type="password" class="pw-input" id="pwInput" placeholder="รหัสผ่าน" onkeydown="if(event.key==='Enter')checkPw()">
+    <input type="password" class="pw-input" id="pwInput" placeholder="รหัสผ่าน"
+           onkeydown="if(event.key==='Enter') checkPassword()">
     <div class="pw-error" id="pwError">รหัสไม่ถูกต้อง</div>
-    <div class="pw-btns">
-      <button class="pw-ok" onclick="checkPw()">ยืนยัน</button>
-      <button class="pw-cancel" onclick="document.getElementById('pwPopupBg').classList.remove('show');document.getElementById('pwInput').value='';document.getElementById('pwError').style.display='none'">ยกเลิก</button>
+    <div class="popup-btns">
+      <button class="btn-primary" onclick="checkPassword()">ยืนยัน</button>
+      <button class="btn-secondary" onclick="closePwPopup()">ยกเลิก</button>
     </div>
   </div>
 </div>
 
-<div class="confirm-popup-bg" id="confirmPopupBg">
-  <div class="confirm-popup">
+<!-- ─── Popup: Confirm Task Done ─────────────────────────── -->
+<div class="popup-bg" id="confirmPopup">
+  <div class="popup-box">
     <p id="confirmMsg"></p>
-    <div class="confirm-btns">
-      <button class="confirm-yes" id="confirmYes">ยืนยัน</button>
-      <button class="confirm-no" onclick="document.getElementById('confirmPopupBg').classList.remove('show')">ยกเลิก</button>
+    <div class="popup-btns">
+      <button class="btn-primary" id="confirmYesBtn">ยืนยัน</button>
+      <button class="btn-secondary" onclick="document.getElementById('confirmPopup').classList.remove('show')">ยกเลิก</button>
     </div>
   </div>
 </div>
 
-<div class="day-popup-bg" id="dayPopupBg">
-  <div class="day-popup">
+<!-- ─── Popup: Day Events ─────────────────────────────────── -->
+<div class="popup-bg" id="dayPopup">
+  <div class="day-popup-box">
     <button class="day-popup-close" id="dayPopupClose">×</button>
     <div class="day-popup-title" id="dayPopupTitle"></div>
     <div id="dayPopupContent"></div>
   </div>
 </div>
 
-<div class="modal-bg" id="modalBg">
-  <div class="modal">
-    <div class="modal-head">
-      <div>
-        <div class="modal-title" id="mTitle"></div>
-        <div class="modal-sub" id="mSub"></div>
-      </div>
-      <button class="modal-close" id="modalClose">×</button>
-    </div>
-    <div id="mContent"></div>
-  </div>
-</div>
-
 <script>
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRo75-UkhXcDBNDjcw8SpyjTNZZq1w6mZoRUxYAYd1FO4sAQGMkuHzD4bx0CupUHFaGSMYwRsaQ4RoW/pub?gid=0&single=true&output=csv";
-const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
-const THAI_MONTHS_SHORT = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+/* ════════════════════════════════════════════════════════════
+   CONSTANTS & CONFIG
+   ⚠️ อัปเดต URL เมื่อ:
+     - deploy Apps Script ใหม่ → WEBAPP_URL เปลี่ยน
+     - สร้าง GSheet ใหม่ → CSV_URL เปลี่ยน
+     - เพิ่ม sheet task_done → TASK_DONE_CSV_URL เปลี่ยน
+   ════════════════════════════════════════════════════════════ */
+const CSV_URL          = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRo75-UkhXcDBNDjcw8SpyjTNZZq1w6mZoRUxYAYd1FO4sAQGMkuHzD4bx0CupUHFaGSMYwRsaQ4RoW/pub?gid=0&single=true&output=csv";
+const TASK_DONE_CSV_URL= "https://docs.google.com/spreadsheets/d/e/2PACX-1vRo75-UkhXcDBNDjcw8SpyjTNZZq1w6mZoRUxYAYd1FO4sAQGMkuHzD4bx0CupUHFaGSMYwRsaQ4RoW/pub?gid=1822590170&single=true&output=csv";
+const WEBAPP_URL       = "https://script.google.com/macros/s/AKfycbzADiwBW8G9AsusIV-6PUVtnW-GZfSBR0mGTxLLbiypyLFC2wWCNAfVCM8sIi21v-pCkA/exec";
+const VALID_PASSWORDS  = ["aum", "eve", "cheer"]; // ⚠️ รหัสเป็น lowercase เสมอ
+const THAI_MONTHS      = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+const THAI_MONTHS_S    = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
-let allStores = [], currentTab = "all";
+/* ════════════════════════════════════════════════════════════
+   SCHEDULE_ITEMS — แสดงใน Schedule tab และ accordion
+   TASK_ITEMS     — แสดงใน Tasks tab (ต้อง unlock ก่อน)
+
+   ⚠️ key ต้องตรงกับ header ใน GSheet calendar_data ทุกตัว
+      ถ้าเปลี่ยน header ใน Apps Script ต้องเปลี่ยน key ที่นี่ด้วย
+   ⚠️ showName:true = แสดงชื่อร้านต่อท้าย label (ใช้กับเปิดร้าน)
+   ⚠️ lastOrderFrom = คำนวณ date จาก PickDate นั้น - 1 วัน
+   ════════════════════════════════════════════════════════════ */
+const SCHEDULE_ITEMS = [
+  { key:"PickDate_Food",              label:"จัด Food",        cls:"color-food-pick" },
+  { key:"Food Delivery (D-4)",        label:"ส่ง Food",         cls:"color-food-del"  },
+  { key:"PickDate_Store Use",         label:"จัด Store Use",    cls:"color-store-pick"},
+  { key:"Store Use Delivery (D-4)",   label:"ส่ง Store Use",    cls:"color-store-del" },
+  { key:"PickDate_Bao Café",          label:"จัด Bao Café",     cls:"color-bao-pick"  },
+  { key:"Bao Café Delivery (D-4)",    label:"ส่ง Bao Café",     cls:"color-bao-del"   },
+  { key:"PickDate_Non Food",          label:"จัด Non Food",     cls:"color-nonfood-pick"},
+  { key:"Non-Food Delivery (D-3)",    label:"ส่ง Non Food",     cls:"color-nonfood-del"},
+  { key:"PickDate_Life Style",        label:"จัด Life Style",   cls:"color-life-pick" },
+  { key:"Life Style Delivery (D-3)",  label:"ส่ง Life Style",   cls:"color-life-del"  },
+  { key:"PickDate_สินค้ารอบเก็บตก", label:"จัด เก็บตก",      cls:"color-pro-pick"  },
+  { key:"Pro Delivery (D-2)",         label:"ส่ง เก็บตก",       cls:"color-pro-del"   },
+  { key:"PickDate_Chilled",           label:"จัด Chilled",      cls:"color-chill-pick"},
+  { key:"Chill Delivery (D-1)",       label:"ส่ง Chilled",      cls:"color-chill-del" },
+  { key:"Grand Open Date",            label:"เปิดร้าน",         cls:"color-open", showName:true },
+];
+
+const TASK_ITEMS = [
+  { key:"Submit OR First Lot (D-8)",  label:"Submit OR First Lot",  cls:"color-task" },
+  { key:"OOS Report to Commer (D-7)", label:"OOS Report",           cls:"color-task" },
+  { key:"Commer Feedback (D-5)",      label:"Commer Feedback",      cls:"color-task" },
+  { key:"Last Order HB Sell",         label:"Last Order HB",        cls:"color-task" },
+  { key:"Set Parameter (D-2)",        label:"Set Parameter",        cls:"color-task" },
+  { key:"Reassign TB2 (D+8)",         label:"Reassign TB2",         cls:"color-task" },
+  { key:"Grand Open Date",            label:"เปิดร้าน",             cls:"color-open", showName:true },
+  // Last Order = PickDate - 1 วัน (คำนวณใน JS ไม่ได้ดึงจาก column โดยตรง)
+  { key:"_lo_food",    label:"Last Order Food",     cls:"color-task", lastOrderFrom:"PickDate_Food"              },
+  { key:"_lo_store",   label:"Last Order Store Use", cls:"color-task", lastOrderFrom:"PickDate_Store Use"        },
+  { key:"_lo_bao",     label:"Last Order Bao Café",  cls:"color-task", lastOrderFrom:"PickDate_Bao Café"         },
+  { key:"_lo_nonfood", label:"Last Order Non Food",  cls:"color-task", lastOrderFrom:"PickDate_Non Food"         },
+  { key:"_lo_life",    label:"Last Order Life Style",cls:"color-task", lastOrderFrom:"PickDate_Life Style"       },
+  { key:"_lo_pro",     label:"Last Order เก็บตก",   cls:"color-task", lastOrderFrom:"PickDate_สินค้ารอบเก็บตก"},
+  { key:"_lo_chilled", label:"Last Order Chilled",   cls:"color-task", lastOrderFrom:"PickDate_Chilled"          },
+];
+
+/* TASK_COL_MAP: map label → column ใน GSheet task_done
+   ⚠️ ต้องตรงกับ header ใน sheet task_done ทุกตัว */
+const TASK_COL_MAP = {
+  "Submit OR First Lot":  "done_submit_or",
+  "OOS Report":           "done_oos_report",
+  "Commer Feedback":      "done_commer_fb",
+  "Last Order HB":        "done_last_hb",
+  "Set Parameter":        "done_set_param",
+  "Reassign TB2":         "done_reassign_tb2",
+  "Last Order Food":      "done_lo_food",
+  "Last Order Store Use": "done_lo_store",
+  "Last Order Bao Café":  "done_lo_bao",
+  "Last Order Non Food":  "done_lo_nonfood",
+  "Last Order Life Style":"done_lo_life",
+  "Last Order เก็บตก":   "done_lo_pro",
+  "Last Order Chilled":   "done_lo_chilled",
+};
+
+/* ════════════════════════════════════════════════════════════
+   STATE
+   ⚠️ taskUnlocked และ currentUser ต้อง declare ครั้งเดียวเท่านั้น
+      (เคยเกิด bug "Identifier already declared" จาก declare ซ้ำ)
+   ════════════════════════════════════════════════════════════ */
+let allStores    = [];
+let taskDoneMap  = {}; // { store_code: { done_submit_or: "eve", ... } }
+let currentTab   = "all";
+let taskUnlocked = false;
+let currentUser  = null;
+
 const today = new Date(); today.setHours(0,0,0,0);
-
-function getWeekStart(d) { const x = new Date(d); x.setDate(x.getDate()-x.getDay()); x.setHours(0,0,0,0); return x; }
+function getWeekStart(d) { const x=new Date(d); x.setDate(x.getDate()-x.getDay()); x.setHours(0,0,0,0); return x; }
 let viewStart = getWeekStart(today);
 
+/* ════════════════════════════════════════════════════════════
+   DATE UTILITIES
+   ⚠️ parseDate ใช้ local time (ไม่ใช่ UTC) เพื่อป้องกัน off-by-one
+      new Date("2026-06-24") = UTC = แสดงเป็น 23 มิ.ย. ใน GMT+7
+   ════════════════════════════════════════════════════════════ */
 function parseDate(str) {
   if (!str || str.length < 10) return null;
   const p = str.substring(0,10).split("-");
@@ -304,236 +488,193 @@ function dateToStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function todayStr() { return dateToStr(today); }
+function fmtShort(d) { return d ? `${d.getDate()} ${THAI_MONTHS_S[d.getMonth()]}` : ""; }
 
-const SCHEDULE_ITEMS = [
-  { key: "PickDate_Food",              label: "จัด Food",       cls: "color-food-pick" },
-  { key: "Food Delivery (D-4)",        label: "ส่ง Food",        cls: "color-food-del" },
-  { key: "PickDate_Store Use",         label: "จัด Store Use",   cls: "color-store-pick" },
-  { key: "Store Use Delivery (D-4)",   label: "ส่ง Store Use",   cls: "color-store-del" },
-  { key: "PickDate_Bao Café",          label: "จัด Bao Café",    cls: "color-bao-pick" },
-  { key: "Bao Café Delivery (D-4)",    label: "ส่ง Bao Café",    cls: "color-bao-del" },
-  { key: "PickDate_Non Food",          label: "จัด Non Food",    cls: "color-nonfood-pick" },
-  { key: "Non-Food Delivery (D-3)",    label: "ส่ง Non Food",    cls: "color-nonfood-del" },
-  { key: "PickDate_Life Style",        label: "จัด Life Style",  cls: "color-life-pick" },
-  { key: "Life Style Delivery (D-3)",  label: "ส่ง Life Style",  cls: "color-life-del" },
-  { key: "PickDate_สินค้ารอบเก็บตก", label: "จัด เก็บตก",     cls: "color-pro-pick" },
-  { key: "Pro Delivery (D-2)",         label: "ส่ง เก็บตก",     cls: "color-pro-del" },
-  { key: "PickDate_Chilled",           label: "จัด Chilled",     cls: "color-chill-pick" },
-  { key: "Chill Delivery (D-1)",       label: "ส่ง Chilled",     cls: "color-chill-del" },
-  { key: "Grand Open Date",            label: "เปิดร้าน",        cls: "color-open", showName: true },
-];
-
-const TASK_ITEMS = [
-  { key: "Submit OR First Lot (D-8)",  label: "Submit OR First Lot", cls: "color-task" },
-  { key: "OOS Report to Commer (D-7)", label: "OOS Report",          cls: "color-task" },
-  { key: "Commer Feedback (D-5)",      label: "Commer Feedback",     cls: "color-task" },
-  { key: "Last Order HB Sell",         label: "Last Order HB",       cls: "color-task" },
-  { key: "Set Parameter (D-2)",        label: "Set Parameter",       cls: "color-task" },
-  { key: "Reassign TB2 (D+8)",         label: "Reassign TB2",        cls: "color-task" },
-  { key: "Grand Open Date",            label: "เปิดร้าน",            cls: "color-open", showName: true },
-  { key: "_lastorder_food",            label: "Last Order Food",     cls: "color-task", lastOrderFrom: "PickDate_Food" },
-  { key: "_lastorder_store",           label: "Last Order Store Use",cls: "color-task", lastOrderFrom: "PickDate_Store Use" },
-  { key: "_lastorder_bao",             label: "Last Order Bao Café", cls: "color-task", lastOrderFrom: "PickDate_Bao Café" },
-  { key: "_lastorder_nonfood",         label: "Last Order Non Food", cls: "color-task", lastOrderFrom: "PickDate_Non Food" },
-  { key: "_lastorder_life",            label: "Last Order Life Style",cls: "color-task", lastOrderFrom: "PickDate_Life Style" },
-  { key: "_lastorder_pro",             label: "Last Order เก็บตก", cls: "color-task", lastOrderFrom: "PickDate_สินค้ารอบเก็บตก" },
-  { key: "_lastorder_chilled",         label: "Last Order Chilled",  cls: "color-task", lastOrderFrom: "PickDate_Chilled" },
-];
-
-const categoryMap = {};
-SCHEDULE_ITEMS.forEach(i => categoryMap[i.key] = "schedule");
-TASK_ITEMS.forEach(i => categoryMap[i.key] = "tasks");
-
+/* ════════════════════════════════════════════════════════════
+   CSV PARSER
+   ⚠️ รองรับ field ที่มี comma ใน quotes เท่านั้น
+      ถ้า GSheet มี newline ใน cell จะ parse ผิด
+   ════════════════════════════════════════════════════════════ */
 function parseCSV(text) {
   const lines = text.trim().split("\n");
   const headers = lines[0].split(",").map(h => h.replace(/"/g,"").trim());
   return lines.slice(1).map(line => {
-    const vals = []; let cur = "", inQ = false;
-    for (let c of line) {
+    const vals=[]; let cur="", inQ=false;
+    for (const c of line) {
       if (c==='"') inQ=!inQ;
       else if (c===',' && !inQ) { vals.push(cur.trim()); cur=""; }
       else cur+=c;
     }
     vals.push(cur.trim());
-    const obj = {};
-    headers.forEach((h,i) => obj[h] = vals[i]||"");
+    const obj={};
+    headers.forEach((h,i) => obj[h]=vals[i]||"");
     return obj;
   });
 }
 
+/* ════════════════════════════════════════════════════════════
+   getActiveItems — คืน items ตาม tab ปัจจุบัน
+   Overall  → เฉพาะ เปิดร้าน (showName)
+   Schedule → SCHEDULE_ITEMS ทั้งหมด
+   Tasks    → SCHEDULE_ITEMS + TASK_ITEMS รวมกัน
+   ════════════════════════════════════════════════════════════ */
+function getActiveItems() {
+  if (currentTab === "schedule") return SCHEDULE_ITEMS;
+  if (currentTab === "tasks")    return [...SCHEDULE_ITEMS, ...TASK_ITEMS];
+  return SCHEDULE_ITEMS.filter(i => i.showName); // overall
+}
+
+/* ════════════════════════════════════════════════════════════
+   getFilteredStores
+   ⚠️ filter ทั้ง store และ date พร้อมกัน
+   ════════════════════════════════════════════════════════════ */
 function getFilteredStores() {
   const storeVal = document.getElementById("storeSelect").value;
-  const dateVal = document.getElementById("filterDate").value;
+  const dateVal  = document.getElementById("filterDate").value;
   return allStores.filter(s => {
     if (storeVal && s["Nest Store Code"] !== storeVal) return false;
-    if (dateVal && s["Grand Open Date"] !== dateVal) return false;
+    if (dateVal  && s["Grand Open Date"] !== dateVal)  return false;
     return true;
   });
 }
 
-function getActiveItems() {
-  if (currentTab === "schedule") return SCHEDULE_ITEMS;
-  if (currentTab === "tasks") return TASK_ITEMS;
-  // overall: แสดงแค่ เปิดร้าน
-  return SCHEDULE_ITEMS.filter(i => i.showName);
-}
-
+/* ════════════════════════════════════════════════════════════
+   buildEventMap — สร้าง map วันที่ → events
+   ⚠️ Grand Fair fill ขึ้นเฉพาะ tab ที่ไม่ใช่ "all"
+   ⚠️ เปิดร้าน (showName) ไม่ถูก group รวม แสดงแยกทุกร้าน
+      event อื่นถูก group ตาม label (เช่น "ส่ง Food +3")
+   ════════════════════════════════════════════════════════════ */
 function buildEventMap(stores) {
   const map = {};
   stores.forEach(store => {
+    // Grand Fair fill
     const openD = parseDate(store["Grand Open Date"]);
     if (openD && currentTab !== "all") {
-      for (let n = 0; n <= 4; n++) {
-        const d = new Date(openD); d.setDate(d.getDate()+n);
-        const k = dateToStr(d);
-        if (!map[k]) map[k] = { events:[], fairType:null, grouped:{} };
-        if (!map[k].fairType) map[k].fairType = "peak";
+      for (let n=0; n<=4; n++) {
+        const d=new Date(openD); d.setDate(d.getDate()+n);
+        const k=dateToStr(d);
+        if (!map[k]) map[k]={events:[],fairType:null,grouped:{}};
+        if (!map[k].fairType) map[k].fairType="peak";
       }
-      for (let n = 5; n <= 13; n++) {
-        const d = new Date(openD); d.setDate(d.getDate()+n);
-        const k = dateToStr(d);
-        if (!map[k]) map[k] = { events:[], fairType:null, grouped:{} };
-        if (!map[k].fairType) map[k].fairType = "normal";
+      for (let n=5; n<=13; n++) {
+        const d=new Date(openD); d.setDate(d.getDate()+n);
+        const k=dateToStr(d);
+        if (!map[k]) map[k]={events:[],fairType:null,grouped:{}};
+        if (!map[k].fairType) map[k].fairType="normal";
       }
     }
-    const seenKeys = new Set();
+
+    const seen = new Set();
     getActiveItems().forEach(item => {
+      // คำนวณวันที่
       let d;
       if (item.lastOrderFrom) {
-        const pickD = parseDate(store[item.lastOrderFrom]);
-        if (!pickD) return;
-        d = new Date(pickD); d.setDate(d.getDate()-1);
+        const pd = parseDate(store[item.lastOrderFrom]);
+        if (!pd) return;
+        d = new Date(pd); d.setDate(d.getDate()-1);
       } else {
         d = parseDate(store[item.key]);
       }
       if (!d) return;
       const k = dateToStr(d);
-      const dedupKey = k+"_"+item.key+"_"+(store["Nest Store Code"]||"");
-      if (seenKeys.has(dedupKey)) return;
-      seenKeys.add(dedupKey);
-      if (!map[k]) map[k] = { events:[], fairType:null, grouped:{} };
+      const dedupKey = k+"_"+item.key+"_"+store["Nest Store Code"];
+      if (seen.has(dedupKey)) return;
+      seen.add(dedupKey);
+      if (!map[k]) map[k]={events:[],fairType:null,grouped:{}};
 
-      const isOpen = item.showName;
-      if (isOpen) {
-        // เปิดร้าน → ขึ้นแยกทีละร้านเหมือนเดิม
-        map[k].events.push({ label: item.label, cls: item.cls, store, item });
+      if (item.showName) {
+        // เปิดร้าน — ไม่ group แสดงแยกทุกร้าน
+        map[k].events.push({label:item.label, cls:item.cls, store, item});
       } else {
         // group ตาม label
-        if (!map[k].grouped[item.label]) {
-          map[k].grouped[item.label] = { label: item.label, cls: item.cls, stores: [], item };
-        }
+        if (!map[k].grouped[item.label]) map[k].grouped[item.label]={label:item.label,cls:item.cls,stores:[],item};
         map[k].grouped[item.label].stores.push(store);
       }
     });
   });
 
-  // แปลง grouped → events
+  // แปลง grouped → events (วางก่อน เปิดร้าน)
   Object.values(map).forEach(day => {
-    Object.values(day.grouped).forEach(g => {
+    const groupedEvents = Object.values(day.grouped).map(g => {
       const count = g.stores.length;
-      const displayLabel = count > 1 ? `${g.label} +${count}` : g.label;
-      day.events.unshift({ label: displayLabel, cls: g.cls, store: g.stores[0], item: g.item, allStores: g.stores, isGrouped: count > 1 });
+      return {
+        label: count>1 ? `${g.label} +${count}` : g.label,
+        cls: g.cls, store: g.stores[0], item: g.item,
+        allStores: g.stores, isGrouped: count>1
+      };
     });
+    day.events = [...groupedEvents, ...day.events];
   });
 
   return map;
 }
 
+/* ════════════════════════════════════════════════════════════
+   renderCalendar
+   ════════════════════════════════════════════════════════════ */
 function renderCalendar() {
-  const stores = getFilteredStores();
+  const stores   = getFilteredStores();
   const eventMap = buildEventMap(stores);
-  const grid = document.getElementById("calGrid");
+  const grid     = document.getElementById("calGrid");
   grid.innerHTML = "";
 
+  // Month label ใน nav bar
   const endDate = new Date(viewStart); endDate.setDate(endDate.getDate()+34);
-  const startM = THAI_MONTHS[viewStart.getMonth()];
-  const endM = THAI_MONTHS[endDate.getMonth()];
-  document.getElementById("monthLabel").textContent = viewStart.getMonth() === endDate.getMonth()
-    ? `${startM} ${viewStart.getFullYear()}`
-    : `${startM} – ${endM} ${endDate.getFullYear()}`;
+  document.getElementById("monthLabel").textContent =
+    viewStart.getMonth()===endDate.getMonth()
+      ? `${THAI_MONTHS[viewStart.getMonth()]} ${viewStart.getFullYear()}`
+      : `${THAI_MONTHS[viewStart.getMonth()]} – ${THAI_MONTHS[endDate.getMonth()]} ${endDate.getFullYear()}`;
   document.getElementById("storeCount").textContent = `แสดง ${stores.length} ร้านที่ยังไม่เปิด`;
 
   const tStr = todayStr();
-  const totalCells = 35;
-  const cellH = `calc((100vh - 160px - 5 * 20px) / 5)`;
-
-  for (let i = 0; i < totalCells; i++) {
-    if (i % 7 === 0) {
-      const weekD = new Date(viewStart); weekD.setDate(weekD.getDate()+i);
-      const weekEnd = new Date(weekD); weekEnd.setDate(weekEnd.getDate()+6);
-      let barText = weekD.getMonth() === weekEnd.getMonth()
-        ? THAI_MONTHS[weekD.getMonth()]+" "+weekD.getFullYear()
-        : THAI_MONTHS[weekD.getMonth()]+" – "+THAI_MONTHS[weekEnd.getMonth()]+" "+weekEnd.getFullYear();
-      const bar = document.createElement("div");
-      bar.className = "week-month-bar "+(weekD.getMonth()%2===0?"month-even":"month-odd");
-      bar.textContent = barText;
-      grid.appendChild(bar);
+  for (let i=0; i<35; i++) {
+    // ใส่ month-col ทุกต้นสัปดาห์ (i % 7 === 0)
+    if (i%7===0) {
+      const wd=new Date(viewStart); wd.setDate(wd.getDate()+i);
+      const we=new Date(wd); we.setDate(we.getDate()+6);
+      const mc=document.createElement("div");
+      mc.className="month-col";
+      mc.textContent = wd.getMonth()===we.getMonth()
+        ? THAI_MONTHS_S[wd.getMonth()]
+        : THAI_MONTHS_S[wd.getMonth()]+"/"+THAI_MONTHS_S[we.getMonth()];
+      grid.appendChild(mc);
     }
-
-    const cell = document.createElement("div");
-    cell.className = "cal-cell";
 
     const curDate = new Date(viewStart); curDate.setDate(curDate.getDate()+i);
     const dateStr = dateToStr(curDate);
-    const dayNum = curDate.getDate();
+    const dayNum  = curDate.getDate();
+    const dow     = i%7;
 
-    cell.classList.add(curDate.getMonth()%2===0?"month-even":"month-odd");
-    if (dateStr === tStr) cell.classList.add("is-today");
-
+    const cell = document.createElement("div");
+    cell.className = "cal-cell " + (curDate.getMonth()%2===0 ? "month-even" : "month-odd");
+    if (dateStr===tStr)                       cell.classList.add("is-today");
     const info = eventMap[dateStr];
-    if (info && info.fairType) cell.classList.add(info.fairType==="peak"?"fair-peak":"fair-normal");
-    if (curDate.getDate()===1) cell.classList.add("new-month-border");
+    if (info?.fairType==="peak")   cell.classList.add("fair-peak");
+    if (info?.fairType==="normal") cell.classList.add("fair-normal");
+    if (curDate.getDate()===1)     cell.classList.add("new-month-border");
 
-    if (i % 7 === 0) {
-      const weekD = new Date(viewStart); weekD.setDate(weekD.getDate()+i);
-      const weekEnd = new Date(weekD); weekEnd.setDate(weekEnd.getDate()+6);
-      const MONTHS_SHORT = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
-      const mCol = document.createElement("div");
-      mCol.className = "month-col";
-      if (weekD.getMonth() === weekEnd.getMonth()) {
-        mCol.textContent = MONTHS_SHORT[weekD.getMonth()];
-      } else {
-        mCol.textContent = MONTHS_SHORT[weekD.getMonth()] + "/" + MONTHS_SHORT[weekEnd.getMonth()];
-      }
-      grid.appendChild(mCol);
-    }
+    // วันที่
+    const dn=document.createElement("div");
+    dn.className="day-num"+(dateStr===tStr?" today":"")+(dow===0?" sun":dow===6?" sat":"");
+    dn.textContent=dayNum;
+    cell.appendChild(dn);
 
-    const numEl = document.createElement("div");
-    numEl.className = "day-num";
-    const dow = i%7;
-    if (dow===0) numEl.classList.add("sun");
-    if (dow===6) numEl.classList.add("sat");
-    if (dateStr===tStr) numEl.classList.add("today");
-    numEl.textContent = dayNum;
-    cell.appendChild(numEl);
-
+    // Events
     if (info) {
       const maxShow = 3;
-      info.events.slice(0, maxShow).forEach(ev => {
-        const el = document.createElement("div");
-        el.className = "event "+ev.cls;
-        el.textContent = ev.item && ev.item.showName ? ev.label+": "+ev.store["Store Name"] : ev.label;
+      info.events.slice(0,maxShow).forEach(ev => {
+        const el=document.createElement("div");
+        el.className="event "+ev.cls;
+        el.textContent = ev.item?.showName ? `${ev.label}: ${ev.store["Store Name"]}` : ev.label;
         el.title = ev.store["Store Name"];
-        el.addEventListener("click", () => {
-          const isTask = ev.item && TASK_ITEMS.some(t => t.label === ev.item.label || (t.lastOrderFrom && ev.item.lastOrderFrom));
-          const isOpen = ev.item && ev.item.showName;
-          if (isTask && !isOpen) {
-            const codes = ev.allStores ? ev.allStores.map(s=>s["Nest Store Code"]) : [ev.store["Nest Store Code"]];
-            openMultiStorePanel(codes, ev.item.label);
-          } else if (!isTask) {
-            selectStoreScheduleOnly(ev.store);
-          } else {
-            selectStore(ev.store);
-          }
-        });
+        el.addEventListener("click", () => onEventClick(ev));
         cell.appendChild(el);
       });
-      if (info.events.length > maxShow) {
-        const more = document.createElement("div");
-        more.className = "event-more";
-        more.textContent = "+"+(info.events.length-maxShow)+" more";
-        const allEvs = info.events;
-        more.addEventListener("click", () => showDayPopup(dateStr, allEvs));
+      if (info.events.length>maxShow) {
+        const more=document.createElement("div");
+        more.className="event-more";
+        more.textContent=`+${info.events.length-maxShow} more`;
+        more.addEventListener("click", ()=>showDayPopup(dateStr, info.events));
         cell.appendChild(more);
       }
     }
@@ -541,548 +682,421 @@ function renderCalendar() {
   }
 }
 
-function showModal(store) {
-  document.getElementById("mTitle").textContent = store["Store Name"];
-  document.getElementById("mSub").textContent = store["Nest Store Code"]+" · DC: "+store["DC Code"]+" · Layout: "+(store["Store Layout"]||"-");
-  const schedRows = SCHEDULE_ITEMS.map(i=>`<div class="modal-row"><span class="modal-key">${i.label}</span><span class="modal-val">${store[i.key]||"-"}</span></div>`).join("");
-  const taskRows = TASK_ITEMS.filter(i=>i.key!=="Grand Open Date").map(i=>`<div class="modal-row"><span class="modal-key">${i.label}</span><span class="modal-val">${store[i.key]||"-"}</span></div>`).join("");
-  document.getElementById("mContent").innerHTML = `<div class="modal-section">Schedule</div>${schedRows}<div class="modal-section">Tasks</div>${taskRows}`;
-  document.getElementById("modalBg").classList.add("show");
-}
+/* ════════════════════════════════════════════════════════════
+   onEventClick — จัดการ click event ในปฏิทิน
+   เปิดร้าน (showName) → selectStore
+   task → openMultiPanel
+   schedule → selectStoreNoTabSwitch
+   ════════════════════════════════════════════════════════════ */
+function onEventClick(ev) {
+  const isOpen = ev.item?.showName;
+  const isTask = !isOpen && TASK_ITEMS.some(t => t.label===ev.item?.label || (t.lastOrderFrom && ev.item?.lastOrderFrom));
+  const codes  = ev.allStores ? ev.allStores.map(s=>s["Nest Store Code"]) : [ev.store["Nest Store Code"]];
 
-function makeStoreDetailHTML(store) {
-  const openD2 = parseDate(store["Grand Open Date"]);
-  const fairEnd = openD2 ? new Date(openD2) : null;
-  if (fairEnd) fairEnd.setDate(fairEnd.getDate() + 13);
-  const fmt = (d) => `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]}`;
-
-  const schedItems = SCHEDULE_ITEMS.filter(i => store[i.key]);
-  const taskItems = TASK_ITEMS.filter(i => {
-    if (i.lastOrderFrom) return !!store[i.lastOrderFrom];
-    if (i.key === "Grand Open Date") return false;
-    return !!store[i.key];
-  });
-
-  const makeRow = (item, isTask=false) => {
-    let d;
-    if (item.lastOrderFrom) {
-      const pd = parseDate(store[item.lastOrderFrom]);
-      if (!pd) return "";
-      d = new Date(pd); d.setDate(d.getDate()-1);
-    } else {
-      d = parseDate(store[item.key]);
-    }
-    if (!d) return "";
-    const dateLabel = `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]}`;
-    const isTaskItem = item.lastOrderFrom || isTask;
-    const taskCol = TASK_COL_MAP[item.label];
-    const doneBy = taskCol && taskDoneMap[store["Nest Store Code"]] ? taskDoneMap[store["Nest Store Code"]][taskCol] : "";
-    const isDone = !!doneBy;
-
-    if (isTaskItem && currentUser && taskCol) {
-      const cls = isDone ? "tl-event-task done" : "tl-event-task pending";
-      return `<div class="task-checkbox-row">
-        <input type="checkbox" class="task-cb" ${isDone?"checked":""} onchange="toggleTaskDone('${store["Nest Store Code"]}','${item.label}',this)">
-        <div class="${cls}">${item.label}${isDone?` <span class="task-done-by">(${doneBy})</span>`:""}</div>
-      </div>`;
-    }
-    const cls = isTaskItem ? "tl-event-task" : `tl-event ${item.cls}`;
-    return `<div class="tl-row"><div class="tl-date">${dateLabel}</div><div class="${cls}">${item.label}</div></div>`;
-  };
-
-  return `
-    <div class="tab-store-meta">${store["Nest Store Code"]} · DC: ${store["DC Code"]} · ${store["Store Layout"]||"-"} ตรม.</div>
-    <div class="tab-store-meta" style="color:#888;">จัด: ${store["Replen Pick Amb"]||"-"} &nbsp;·&nbsp; ส่ง: ${store["Replen Deli Amb"]||"-"}</div>
-    ${openD2 ? `<div class="tab-store-meta" style="color:#90CAF9;">วันเปิด: ${fmt(openD2)} &nbsp;·&nbsp; Fair: ${fmt(openD2)}–${fmt(fairEnd)}</div>` : ""}
-    <div class="tab-section">Schedule</div>
-    ${schedItems.map(i=>makeRow(i,false)).join("")}
-    <div class="tab-section">Tasks</div>
-    ${taskItems.map(i=>makeRow(i,true)).join("")}
-  `;
-}
-
-function updateDetailPanel(store) {
-  const infoEl = document.getElementById("detailStoreInfo");
-  const tlEl = document.getElementById("detailTimeline");
-  document.getElementById("detailFair").innerHTML = "";
-  const extraEl = document.getElementById("storeInfoExtra");
-  if (extraEl) extraEl.innerHTML = "";
-
-  if (!store) {
-    infoEl.innerHTML = '<div class="detail-empty">เลือกร้านเพื่อดูรายละเอียด</div>';
-    tlEl.innerHTML = "";
-    return;
+  if (isOpen) {
+    selectStore(ev.store);
+  } else if (isTask) {
+    openMultiPanel(codes, ev.item?.label || ev.label);
+  } else {
+    // schedule — แสดง detail แต่ไม่ switch tab
+    selectStore(ev.store);
   }
-
-  // store info header
-  infoEl.innerHTML = `
-    <div class="detail-store-name">${store["Store Name"]}</div>
-    <div class="detail-chips" style="margin-top:8px;">
-      <span class="detail-chip" style="background:#1b3a2a;color:#81C784;">จัด: ${store["Replen Pick Amb"]||"-"}</span>
-      <span class="detail-chip" style="background:#2a1b3a;color:#CE93D8;">ส่ง: ${store["Replen Deli Amb"]||"-"}</span>
-    </div>
-    <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px; display:flex; flex-direction:column; gap:4px;" id="storeInfoExtra"></div>
-  `;
-
-  // fair info
-  const extraEl2 = document.getElementById("storeInfoExtra");
-  const openD2 = parseDate(store["Grand Open Date"]);
-  if (openD2 && extraEl2) {
-    const fairEnd = new Date(openD2); fairEnd.setDate(fairEnd.getDate() + 13);
-    const fmt = (d) => `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]}`;
-    extraEl2.innerHTML = `
-      <div style="display:flex;justify-content:space-between;font-size:13px;">
-        <span style="color:#888;">วันเปิดร้าน</span>
-        <span style="color:#90CAF9;font-weight:500;">${store["Grand Open Date"]}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px;">
-        <span style="color:#888;">ช่วง Fair</span>
-        <span style="color:#FFD54F;font-weight:500;">${fmt(openD2)} – ${fmt(fairEnd)}</span>
-      </div>
-    `;
-  }
-
-  // accordion single store — ยุบก่อน กดค่อยขยาย
-  const storeCode = store["Nest Store Code"];
-  tlEl.innerHTML = `
-    <div class="acc-item" data-code="${storeCode}">
-      <div class="acc-header" onclick="toggleStoreTab(this)" data-store="${storeCode}">
-        <div class="acc-dot"></div>
-        <span class="acc-name">${store["Store Name"]}</span>
-        <span class="acc-date">${store["Grand Open Date"]||""}</span>
-        <span class="acc-arrow">▶</span>
-      </div>
-      <div class="acc-body"></div>
-    </div>
-  `;
-
 }
 
+/* ════════════════════════════════════════════════════════════
+   selectStore — เลือกร้าน + กระโดดไปหาสัปดาห์เปิดร้าน
+   ⚠️ ไม่ switch tab เมื่อกด schedule event
+      switch tab เฉพาะเมื่อกดจาก Overall
+   ════════════════════════════════════════════════════════════ */
 function selectStore(store) {
   document.getElementById("storeSelect").value = store["Nest Store Code"];
-  updateDetailPanel(store);
   const openD = parseDate(store["Grand Open Date"]);
-  if (openD) {
-    viewStart = new Date(getWeekStart(openD));
-    viewStart.setDate(viewStart.getDate()-14);
-  }
+  if (openD) { viewStart=new Date(getWeekStart(openD)); viewStart.setDate(viewStart.getDate()-14); }
+  showStoreAccordion([store["Nest Store Code"]], store["Store Name"], store["DC Code"]+" · "+store["Grand Open Date"]);
   renderCalendar();
 }
 
-function showDayPopup(dateStr, events) {
-  const p = dateStr.split("-");
-  const d = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
-  document.getElementById("dayPopupTitle").textContent = `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
-
-  // group events ที่ label เหมือนกัน
-  const grouped = {};
-  events.forEach(ev => {
-    const key = ev.label;
-    if (!grouped[key]) grouped[key] = { label: ev.label, cls: ev.cls, stores: [], item: ev.item };
-    grouped[key].stores.push(ev.store);
-  });
-
-  const html = Object.values(grouped).map(g => {
-    const isTask = g.item && (TASK_ITEMS.some(t => t.label === g.label));
-    const isOpen = g.item && g.item.showName;
-    const count = g.stores.length;
-    const labelText = count > 1 ? `${g.label} +${count}` : g.label + (isOpen ? ": " + g.stores[0]["Store Name"] : " — " + g.stores[0]["Store Name"]);
-
-    if (isOpen) {
-      // เปิดร้าน → selectStore ปกติ
-      return `<div class="event ${g.cls}" style="margin-bottom:4px;cursor:pointer" onclick="selectStore(allStores.find(s=>s['Nest Store Code']==='${g.stores[0]['Nest Store Code']}'));document.getElementById('dayPopupBg').classList.remove('show');">${labelText}</div>`;
-    } else if (isTask) {
-      // task → เปิด multi-store panel + filter Tasks
-      return `<div class="event color-task" style="margin-bottom:4px;cursor:pointer" onclick="openMultiStorePanel(${JSON.stringify(g.stores.map(s=>s['Nest Store Code']))}, '${g.label}');document.getElementById('dayPopupBg').classList.remove('show');">${labelText}</div>`;
-    } else {
-      // schedule → selectStore ปกติ ไม่ show tasks
-      return `<div class="event ${g.cls}" style="margin-bottom:4px;cursor:pointer" onclick="selectStoreScheduleOnly(allStores.find(s=>s['Nest Store Code']==='${g.stores[0]['Nest Store Code']}'));document.getElementById('dayPopupBg').classList.remove('show');">${labelText}</div>`;
-    }
-  }).join("");
-
-  document.getElementById("dayPopupContent").innerHTML = html;
-  document.getElementById("dayPopupBg").classList.add("show");
-}
-
-function selectStoreScheduleOnly(store) {
-  if (!store) return;
-  document.getElementById("storeSelect").value = store["Nest Store Code"];
-  updateDetailPanel(store);
-  const openD = parseDate(store["Grand Open Date"]);
-  if (openD) { viewStart = new Date(getWeekStart(openD)); viewStart.setDate(viewStart.getDate()-14); }
-  renderCalendar();
-}
-
-function openMultiStorePanel(storeCodes, taskLabel) {
-  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-  document.querySelectorAll(".tab-btn").forEach(b => { if(b.dataset.tab==="tasks") b.classList.add("active"); });
-  currentTab = "tasks";
-  document.getElementById("calView").style.display = "flex";
-  document.getElementById("configView").style.display = "none";
-
-  const stores = storeCodes.map(code => allStores.find(s => s["Nest Store Code"] === code)).filter(Boolean);
+/* ════════════════════════════════════════════════════════════
+   openMultiPanel — เปิด panel หลายร้านจาก task event
+   ════════════════════════════════════════════════════════════ */
+function openMultiPanel(codes, taskLabel) {
   document.getElementById("storeSelect").value = "";
+  showStoreAccordion(codes, taskLabel, `${codes.length} ร้าน`);
+  renderCalendar();
+}
 
+/* ════════════════════════════════════════════════════════════
+   showStoreAccordion — render accordion ใน detail panel
+   ⚠️ accordion เริ่มยุบ (acc-body ไม่มี class show)
+      lazy load content เมื่อกดขยาย
+   ════════════════════════════════════════════════════════════ */
+function showStoreAccordion(codes, title, sub) {
   const infoEl = document.getElementById("detailStoreInfo");
-  infoEl.innerHTML = `<div style="font-size:13px;color:#90CAF9;font-weight:500;padding:4px 0;">${taskLabel}</div><div style="font-size:11px;color:#666;margin-top:2px;">${stores.length} ร้าน</div>`;
-
-  const extraEl = document.getElementById("storeInfoExtra");
-  if (extraEl) extraEl.innerHTML = "";
-  document.getElementById("detailFair").innerHTML = "";
-
-  const tlEl = document.getElementById("detailTimeline");
+  const tlEl   = document.getElementById("detailTimeline");
+  infoEl.innerHTML = `<div style="font-size:14px;font-weight:500;color:#90CAF9;">${title}</div>
+    <div style="font-size:11px;color:#555;margin-top:2px;">${sub}</div>`;
   tlEl.innerHTML = "";
-
-  // แสดงแค่รายชื่อร้าน accordion ยุบอยู่ทั้งหมด
-  const tabsHtml = stores.map((store) => {
-    const openD2 = parseDate(store["Grand Open Date"]);
-    const fairEnd = openD2 ? new Date(openD2) : null;
-    if (fairEnd) fairEnd.setDate(fairEnd.getDate() + 13);
-    const fmt = (d) => `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]}`;
-
-    const schedItems = SCHEDULE_ITEMS.filter(i => store[i.key]);
-    const taskItems = TASK_ITEMS.filter(i => {
-      if (i.lastOrderFrom) return !!store[i.lastOrderFrom];
-      if (i.key.startsWith("_")) return false;
-      return !!store[i.key];
-    });
-
-    const makeTabRow = (item) => {
-      let d;
-      if (item.lastOrderFrom) {
-        const pd = parseDate(store[item.lastOrderFrom]);
-        if (!pd) return "";
-        d = new Date(pd); d.setDate(d.getDate()-1);
-      } else {
-        d = parseDate(store[item.key]);
-      }
-      if (!d) return "";
-      return `<div class="tab-row"><div class="tab-date">${fmt(d)}</div><div class="tab-event ${item.cls}">${item.label}</div></div>`;
-    };
-
-    return `<div style="margin-bottom:4px;" data-code="${store["Nest Store Code"]}">
-        <div class="store-tab-header acc-header" onclick="toggleStoreTab(this)">
-          <div class="acc-dot"></div>
-          <span class="acc-name">${store["Store Name"]}</span>
-          <span class="acc-date">${store["Grand Open Date"]||""}</span>
-          <span class="acc-arrow">▶</span>
-        </div>
-        <div class="store-tab-body acc-body"></div>
-      </div>`;
-  }).join("");
 
   const tabsEl = document.createElement("div");
   tabsEl.className = "store-tabs";
-  tabsEl.innerHTML = tabsHtml;
+  tabsEl.innerHTML = codes.map(code => {
+    const s = allStores.find(s=>s["Nest Store Code"]===code);
+    if (!s) return "";
+    return `<div class="acc-item" data-code="${code}">
+      <div class="acc-header" onclick="toggleAcc(this)">
+        <div class="acc-dot"></div>
+        <span class="acc-name">${s["Store Name"]}</span>
+        <span class="acc-date">${s["Grand Open Date"]||""}</span>
+        <span class="acc-arrow">▶</span>
+      </div>
+      <div class="acc-body"></div>
+    </div>`;
+  }).join("");
   tlEl.appendChild(tabsEl);
-
-  // lazy load เมื่อกด
-  tabsEl.querySelectorAll(".store-tab-header").forEach(header => {
-    header.addEventListener("click", function() {
-      const body = this.nextElementSibling;
-      const code = this.closest("[data-code]").dataset.code;
-      if (!body.innerHTML) {
-        const st = allStores.find(s => s["Nest Store Code"] === code);
-        if (st) body.innerHTML = makeStoreDetailHTML(st);
-      }
-    });
-  });
-
-  renderCalendar();
 }
 
-function toggleStoreTab(header) {
-  const item = header.closest(".acc-item") || header.parentElement;
-  const body = header.nextElementSibling;
+/* ════════════════════════════════════════════════════════════
+   toggleAcc — toggle accordion item
+   ⚠️ lazy load: โหลด content ครั้งแรกที่กด open
+      ครั้งต่อไปใช้ content ที่โหลดแล้ว (ไม่ reload)
+      ถ้าต้องการ reload ต้องล้าง body.innerHTML ก่อน
+   ════════════════════════════════════════════════════════════ */
+function toggleAcc(header) {
+  // ⚠️ หา acc-body ด้วย querySelector แทน nextElementSibling
+  // เพราะ whitespace text node อาจทำให้ nextElementSibling ผิด
+  const item = header.closest(".acc-item");
+  const body = item ? item.querySelector(".acc-body") : null;
   if (!body) return;
+
+  const code   = item.dataset.code;
   const isOpen = body.classList.contains("show");
-  if (!isOpen && !body.innerHTML.trim()) {
-    const code = item.dataset.code || header.dataset.store;
-    if (code) {
-      const st = allStores.find(s => s["Nest Store Code"] === code);
-      if (st) body.innerHTML = makeStoreDetailHTML(st);
-    }
+
+  // lazy load เมื่อเปิดครั้งแรก
+  if (!isOpen && !body.innerHTML.trim() && code) {
+    const s = allStores.find(s => s["Nest Store Code"] === code);
+    if (s) body.innerHTML = makeStoreDetailHTML(s);
   }
+
   body.classList.toggle("show", !isOpen);
   header.classList.toggle("open", !isOpen);
-  if (item) item.classList.toggle("open-item", !isOpen);
+  item.classList.toggle("open-item", !isOpen);
   const arrow = header.querySelector(".acc-arrow");
   if (arrow) arrow.textContent = isOpen ? "▶" : "▼";
 }
 
-function renderConfig() {
-  const all = [...SCHEDULE_ITEMS, ...TASK_ITEMS.filter(i=>i.key!=="Grand Open Date")];
-  document.getElementById("configBody").innerHTML = all.map(item=>`
-    <tr><td>${item.label}</td><td>
-      <select onchange="categoryMap['${item.key}']=this.value;renderCalendar();">
-        <option value="schedule" ${categoryMap[item.key]==="schedule"?"selected":""}>Schedule</option>
-        <option value="tasks" ${categoryMap[item.key]==="tasks"?"selected":""}>Tasks</option>
-      </select>
-    </td></tr>
-  `).join("");
+/* ════════════════════════════════════════════════════════════
+   makeStoreDetailHTML — HTML detail ของร้านใน accordion
+   แสดง Schedule เสมอ + Tasks เพิ่มเมื่อ taskUnlocked
+   ⚠️ checkbox task ใช้ store_code เป็น id
+      ถ้า store_code มีอักขระพิเศษอาจทำให้ querySelector ล้มเหลว
+   ════════════════════════════════════════════════════════════ */
+function makeStoreDetailHTML(store) {
+  const openD  = parseDate(store["Grand Open Date"]);
+  const fairEnd = openD ? new Date(openD) : null;
+  if (fairEnd) fairEnd.setDate(fairEnd.getDate()+13);
+
+  // Schedule rows
+  const schedRows = SCHEDULE_ITEMS.map(item => {
+    let d;
+    if (item.lastOrderFrom) {
+      const pd=parseDate(store[item.lastOrderFrom]); if(!pd) return "";
+      d=new Date(pd); d.setDate(d.getDate()-1);
+    } else { d=parseDate(store[item.key]); }
+    if (!d) return "";
+    return `<div class="tl-row">
+      <div class="tl-date">${fmtShort(d)}</div>
+      <div class="tl-event ${item.cls}">${item.label}</div>
+    </div>`;
+  }).join("");
+
+  // Task rows (แสดงเฉพาะ taskUnlocked)
+  let taskRows = "";
+  if (taskUnlocked) {
+    taskRows = TASK_ITEMS.filter(i=>i.key!=="Grand Open Date").map(item => {
+      let d;
+      if (item.lastOrderFrom) {
+        const pd=parseDate(store[item.lastOrderFrom]); if(!pd) return "";
+        d=new Date(pd); d.setDate(d.getDate()-1);
+      } else { d=parseDate(store[item.key]); }
+      if (!d) return "";
+      const taskCol = TASK_COL_MAP[item.label];
+      const doneBy  = taskCol && taskDoneMap[store["Nest Store Code"]] ? taskDoneMap[store["Nest Store Code"]][taskCol] : "";
+      const isDone  = !!doneBy;
+      const evCls   = "tl-event color-task" + (isDone?" done":" pending");
+      if (taskCol && currentUser) {
+        return `<div class="task-cb-row">
+          <input type="checkbox" class="task-cb" ${isDone?"checked":""} 
+            onchange="toggleTaskDone('${store["Nest Store Code"]}','${item.label}',this)">
+          <div class="${evCls}">${item.label}${isDone?` <span class="done-by">(${doneBy})</span>`:""}</div>
+        </div>`;
+      }
+      return `<div class="tl-row">
+        <div class="tl-date">${fmtShort(d)}</div>
+        <div class="${evCls}">${item.label}${isDone?` <span class="done-by">(${doneBy})</span>`:""}</div>
+      </div>`;
+    }).join("");
+  }
+
+  return `
+    <div class="acc-meta">${store["Nest Store Code"]} · DC: ${store["DC Code"]} · ${store["Store Layout"]||"-"} ตรม.</div>
+    <div class="acc-meta">จัด: ${store["Replen Pick Amb"]||"-"} &nbsp;·&nbsp; ส่ง: ${store["Replen Deli Amb"]||"-"}</div>
+    ${openD ? `<div class="acc-meta blue">วันเปิด: ${fmtShort(openD)} &nbsp;·&nbsp; Fair: ${fmtShort(openD)}–${fmtShort(fairEnd)}</div>` : ""}
+    <div class="tl-section">Schedule</div>
+    ${schedRows}
+    ${taskUnlocked ? `<div class="tl-section">Tasks</div>${taskRows}` : ""}
+  `;
 }
 
-const VALID_PASSWORDS = ["aum", "eve", "cheer"];
-let taskUnlocked = false;
-let currentUser = null;
+/* ════════════════════════════════════════════════════════════
+   Day Popup
+   ════════════════════════════════════════════════════════════ */
+function showDayPopup(dateStr, events) {
+  const p = dateStr.split("-");
+  const d = new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
+  document.getElementById("dayPopupTitle").textContent = `${d.getDate()} ${THAI_MONTHS_S[d.getMonth()]} ${d.getFullYear()}`;
+  document.getElementById("dayPopupContent").innerHTML = events.map(ev => {
+    const isOpen = ev.item?.showName;
+    const label  = isOpen ? `${ev.label}: ${ev.store["Store Name"]}` : ev.label;
+    return `<div class="event ${ev.cls}" style="margin-bottom:4px;cursor:pointer;display:block;"
+      onclick="onEventClick(${JSON.stringify({label:ev.label,cls:ev.cls,store:ev.store,item:ev.item||null,allStores:ev.allStores||null}).replace(/"/g,'&quot;')});document.getElementById('dayPopup').classList.remove('show');"
+    >${label}</div>`;
+  }).join("");
+  document.getElementById("dayPopup").classList.add("show");
+}
 
-function checkPw() {
+/* ════════════════════════════════════════════════════════════
+   Password & Task Lock/Unlock
+   ⚠️ เมื่อ unlock แล้ว accordion ที่เปิดอยู่ต้องถูก reload
+      เพื่อแสดง Tasks ที่เพิ่งปลดล็อค
+   ════════════════════════════════════════════════════════════ */
+function checkPassword() {
   const pw = document.getElementById("pwInput").value.trim().toLowerCase();
   if (VALID_PASSWORDS.includes(pw)) {
     taskUnlocked = true;
-    currentUser = pw;
-    document.getElementById("pwPopupBg").classList.remove("show");
-    document.getElementById("pwInput").value = "";
-    document.getElementById("pwError").style.display = "none";
-    // เปิด Tasks tab
-    currentTab = "tasks";
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    document.querySelectorAll(".tab-btn").forEach(b => { if(b.dataset.tab==="tasks") b.classList.add("active"); });
-    renderCalendar();
+    currentUser  = pw;
+    document.getElementById("tasksTabBtn").textContent = "Tasks ✓";
+    document.getElementById("tasksTabBtn").classList.add("unlocked");
+    closePwPopup();
+    // switch ไป Tasks tab
+    setTab("tasks");
+    // reload accordion ที่เปิดอยู่
+    reloadOpenAccordions();
   } else {
     document.getElementById("pwError").style.display = "block";
   }
 }
-
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzADiwBW8G9AsusIV-6PUVtnW-GZfSBR0mGTxLLbiypyLFC2wWCNAfVCM8sIi21v-pCkA/exec";
-const TASK_DONE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRo75-UkhXcDBNDjcw8SpyjTNZZq1w6mZoRUxYAYd1FO4sAQGMkuHzD4bx0CupUHFaGSMYwRsaQ4RoW/pub?gid=1822590170&single=true&output=csv";
-
-let taskDoneMap = {};  // store_code -> {done_submit_or: "อีฟ", ...}
-
-const TASK_COL_MAP = {
-  "Submit OR First Lot (D-8)":  "done_submit_or",
-  "OOS Report to Commer (D-7)": "done_oos_report",
-  "Commer Feedback (D-5)":      "done_commer_fb",
-  "Last Order HB Sell":         "done_last_hb",
-  "Set Parameter (D-2)":        "done_set_param",
-  "Reassign TB2 (D+8)":         "done_reassign_tb2",
-  "Last Order Food":            "done_lo_food",
-  "Last Order Store Use":       "done_lo_store",
-  "Last Order Bao Café":        "done_lo_bao",
-  "Last Order Non Food":        "done_lo_nonfood",
-  "Last Order Life Style":      "done_lo_life",
-  "Last Order Pro":             "done_lo_pro",
-  "Last Order Chilled":         "done_lo_chilled",
-};
-
-function showConfirm(msg, onYes) {
-  document.getElementById("confirmMsg").textContent = msg;
-  document.getElementById("confirmPopupBg").classList.add("show");
-  const btn = document.getElementById("confirmYes");
-  btn.onclick = () => {
-    document.getElementById("confirmPopupBg").classList.remove("show");
-    onYes();
-  };
+function closePwPopup() {
+  document.getElementById("pwPopup").classList.remove("show");
+  document.getElementById("pwInput").value = "";
+  document.getElementById("pwError").style.display = "none";
+}
+function reloadOpenAccordions() {
+  document.querySelectorAll(".acc-body.show").forEach(body => {
+    const code = body.closest(".acc-item")?.dataset.code;
+    if (code) {
+      const s = allStores.find(s=>s["Nest Store Code"]===code);
+      if (s) body.innerHTML = makeStoreDetailHTML(s);
+    }
+  });
 }
 
+/* ════════════════════════════════════════════════════════════
+   Task Done (checkbox)
+   ⚠️ fetch ไป WEBAPP_URL ต้องใช้ no-cors หรือ CORS ถูกตั้งใน Apps Script
+      ถ้า Apps Script ไม่ return ContentService.MimeType.JSON จะ error
+   ════════════════════════════════════════════════════════════ */
 function toggleTaskDone(storeCode, taskLabel, checkbox) {
   if (!currentUser) return;
   const taskCol = TASK_COL_MAP[taskLabel];
   if (!taskCol) return;
   const isDone = checkbox.checked;
+  checkbox.checked = !isDone; // revert รอ confirm
+
   const msg = isDone
     ? `ยืนยันว่า "${taskLabel}" ทำเสร็จแล้ว?`
     : `ยืนยันยกเลิก "${taskLabel}"?`;
 
-  checkbox.checked = !isDone; // revert ก่อน รอ confirm
-
-  showConfirm(msg, async () => {
+  document.getElementById("confirmMsg").textContent = msg;
+  document.getElementById("confirmPopup").classList.add("show");
+  document.getElementById("confirmYesBtn").onclick = async () => {
+    document.getElementById("confirmPopup").classList.remove("show");
     checkbox.checked = isDone;
     try {
       await fetch(WEBAPP_URL, {
         method: "POST",
-        body: JSON.stringify({
-          action: isDone ? "set" : "unset",
-          store_code: storeCode,
-          task_col: taskCol,
-          updated_by: currentUser
-        })
+        body: JSON.stringify({ action: isDone?"set":"unset", store_code: storeCode, task_col: taskCol, updated_by: currentUser })
       });
-      // อัปเดต local map
       if (!taskDoneMap[storeCode]) taskDoneMap[storeCode] = {};
       taskDoneMap[storeCode][taskCol] = isDone ? currentUser : "";
-      // re-render detail
-      const store = allStores.find(s => s["Nest Store Code"] === storeCode);
-      if (store) updateDetailPanel(store);
-    } catch(e) {
-      console.error(e);
-    }
-  });
+      reloadOpenAccordions();
+    } catch(e) { console.error("taskDone error:", e); }
+  };
 }
 
+/* ════════════════════════════════════════════════════════════
+   setTab — เปลี่ยน tab
+   ════════════════════════════════════════════════════════════ */
+function setTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b => { if(b.dataset.tab===tab) b.classList.add("active"); });
+  if (tab==="config") {
+    document.getElementById("calView").style.display="none";
+    document.getElementById("configView").style.display="flex";
+  } else {
+    document.getElementById("calView").style.display="flex";
+    document.getElementById("configView").style.display="none";
+    renderCalendar();
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   loadData — โหลดข้อมูลจาก GSheet
+   ════════════════════════════════════════════════════════════ */
 async function loadTaskDone() {
   try {
-    const res = await fetch(TASK_DONE_CSV_URL + "&t=" + Date.now());
+    const res = await fetch(TASK_DONE_CSV_URL+"&t="+Date.now());
     const text = await res.text();
     const rows = parseCSV(text);
     taskDoneMap = {};
-    rows.forEach(r => {
-      if (r["store_code"]) taskDoneMap[r["store_code"]] = r;
-    });
-  } catch(e) {
-    console.log("task_done load failed:", e);
-  }
+    rows.forEach(r => { if(r["store_code"]) taskDoneMap[r["store_code"]]=r; });
+  } catch(e) { console.log("task_done load failed:", e); }
 }
 
 async function loadData() {
   try {
-    const res = await fetch(CSV_URL+"&t="+Date.now());
+    await loadTaskDone();
+    const res  = await fetch(CSV_URL+"&t="+Date.now());
     const text = await res.text();
-    allStores = parseCSV(text).filter(s=>s["Store Name"]);
+    allStores  = parseCSV(text).filter(s=>s["Store Name"]);
+
+    // populate store dropdown
     const storeSel = document.getElementById("storeSelect");
     allStores.forEach(s => {
-      const opt = document.createElement("option");
-      opt.value = s["Nest Store Code"];
-      opt.textContent = s["Nest Store Code"]+" - "+s["Store Name"];
+      const opt=document.createElement("option");
+      opt.value=s["Nest Store Code"];
+      opt.textContent=s["Nest Store Code"]+" - "+s["Store Name"];
       storeSel.appendChild(opt);
     });
-    await loadTaskDone();
 
-    // populate filter วันที่เปิดร้าน
-    const dateSel = document.getElementById("filterDate");
+    // populate date filter (เฉพาะวันที่มีร้านเปิด)
+    const dateSel   = document.getElementById("filterDate");
     const openDates = {};
-    allStores.forEach(s => {
-      const d = s["Grand Open Date"];
-      if (d) openDates[d] = (openDates[d]||0) + 1;
-    });
+    allStores.forEach(s => { const d=s["Grand Open Date"]; if(d) openDates[d]=(openDates[d]||0)+1; });
     Object.keys(openDates).sort().forEach(d => {
-      const opt = document.createElement("option");
-      opt.value = d;
-      const pd = parseDate(d);
-      const label = pd ? `${pd.getDate()} ${THAI_MONTHS_SHORT[pd.getMonth()]} (${openDates[d]} ร้าน)` : d;
-      opt.textContent = label;
+      const opt=document.createElement("option");
+      const pd=parseDate(d);
+      opt.value=d;
+      opt.textContent=pd ? `${pd.getDate()} ${THAI_MONTHS_S[pd.getMonth()]} (${openDates[d]} ร้าน)` : d;
       dateSel.appendChild(opt);
     });
 
     renderCalendar();
     renderConfig();
   } catch(e) {
-    document.getElementById("calGrid").innerHTML = '<div class="loading">โหลดข้อมูลไม่ได้ กรุณา refresh</div>';
+    document.getElementById("calGrid").innerHTML="<div class='loading'>โหลดข้อมูลไม่ได้ กรุณา refresh</div>";
   }
 }
 
-document.getElementById("prevMonth").addEventListener("click", ()=>{ viewStart.setDate(viewStart.getDate()-7); renderCalendar(); });
-document.getElementById("nextMonth").addEventListener("click", ()=>{ viewStart.setDate(viewStart.getDate()+7); renderCalendar(); });
+/* ════════════════════════════════════════════════════════════
+   Config View
+   ════════════════════════════════════════════════════════════ */
+function renderConfig() {
+  const all = [...SCHEDULE_ITEMS, ...TASK_ITEMS.filter(i=>i.key!=="Grand Open Date")];
+  document.getElementById("configBody").innerHTML = all.map(item=>`
+    <tr><td>${item.label}</td><td>
+      <select><option>Schedule</option><option>Tasks</option></select>
+    </td></tr>
+  `).join("");
+}
 
-let scrollCooldown = false;
-document.addEventListener("wheel", (e) => {
+/* ════════════════════════════════════════════════════════════
+   EVENT LISTENERS
+   ════════════════════════════════════════════════════════════ */
+document.getElementById("prevBtn").addEventListener("click", ()=>{ viewStart.setDate(viewStart.getDate()-7); renderCalendar(); });
+document.getElementById("nextBtn").addEventListener("click", ()=>{ viewStart.setDate(viewStart.getDate()+7); renderCalendar(); });
+
+// Scroll wheel
+let scrollCD = false;
+document.addEventListener("wheel", e=>{
   e.preventDefault();
-  if (scrollCooldown) return;
-  scrollCooldown = true;
-  setTimeout(()=>scrollCooldown=false, 300);
+  if (scrollCD) return;
+  scrollCD=true; setTimeout(()=>scrollCD=false,300);
   viewStart.setDate(viewStart.getDate()+(e.deltaY>0?7:-7));
   renderCalendar();
-}, { passive: false });
+}, {passive:false});
 
+// Store dropdown
 document.getElementById("storeSelect").addEventListener("change", function(){
-  const store = allStores.find(s=>s["Nest Store Code"]===this.value)||null;
-  updateDetailPanel(store);
-  if (store && store["Grand Open Date"]) {
-    const openD = parseDate(store["Grand Open Date"]);
-    if (openD) { viewStart = new Date(getWeekStart(openD)); viewStart.setDate(viewStart.getDate()-14); }
+  const s = allStores.find(s=>s["Nest Store Code"]===this.value);
+  if (s) selectStore(s);
+  else { document.getElementById("detailStoreInfo").innerHTML='<div class="detail-empty">เลือกร้านเพื่อดูรายละเอียด</div>'; document.getElementById("detailTimeline").innerHTML=""; renderCalendar(); }
+});
+
+// Date filter
+document.getElementById("filterDate").addEventListener("change", function(){
+  const val = this.value;
+  if (!val) { renderCalendar(); return; }
+  const matches = allStores.filter(s=>s["Grand Open Date"]===val);
+  const pd = parseDate(val);
+  if (pd) { viewStart=new Date(getWeekStart(pd)); viewStart.setDate(viewStart.getDate()-7); }
+  if (matches.length) {
+    const pd2 = parseDate(val);
+    showStoreAccordion(matches.map(s=>s["Nest Store Code"]),
+      "วันเปิดร้าน", `${matches.length} ร้าน · ${pd2?fmtShort(pd2):val}`);
   }
   renderCalendar();
 });
 
-document.getElementById("resetBtn").addEventListener("click", ()=>{
-  document.getElementById("storeSelect").value = "";
-  document.getElementById("filterDate").value = "";
-  taskUnlocked = false;
-  currentUser = null;
-  updateDetailPanel(null);
-  viewStart = getWeekStart(today);
-  currentTab = "all";
-  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-  document.querySelectorAll(".tab-btn").forEach(b => { if(b.dataset.tab==="all") b.classList.add("active"); });
-  renderCalendar();
-});
-
-document.getElementById("filterDate").addEventListener("change", function() {
-  const dateVal = this.value;
-  const d = parseDate(dateVal);
-  if (d) {
-    viewStart = new Date(getWeekStart(d));
-    viewStart.setDate(viewStart.getDate() - 7);
-
-    // หาร้านที่เปิดวันนั้น → แสดงเป็น accordion ใน detail panel
-    const stores = allStores.filter(s => s["Grand Open Date"] === dateVal);
-    if (stores.length > 0) {
-      const infoEl = document.getElementById("detailStoreInfo");
-      const tlEl = document.getElementById("detailTimeline");
-      const fairEl = document.getElementById("detailFair");
-      const extraEl = document.getElementById("storeInfoExtra");
-
-      infoEl.innerHTML = `<div style="font-size:13px;color:#90CAF9;font-weight:500;">วันเปิดร้าน</div>
-        <div style="font-size:11px;color:#666;margin-top:2px;">${stores.length} ร้าน · ${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}</div>`;
-      if (fairEl) fairEl.innerHTML = "";
-      if (extraEl) extraEl.innerHTML = "";
-
-      const tabsHtml = stores.map(store => `
-        <div style="margin-bottom:4px;" data-code="${store["Nest Store Code"]}">
-          <div class="store-tab-header" onclick="toggleStoreTab(this)">
-            <span class="tab-name">${store["Store Name"]}</span>
-            <span style="font-size:10px;color:#777;">▶</span>
-          </div>
-          <div class="store-tab-body"></div>
-        </div>`).join("");
-
-      const tabsEl = document.createElement("div");
-      tabsEl.className = "store-tabs";
-      tabsEl.innerHTML = tabsHtml;
-      tlEl.innerHTML = "";
-      tlEl.appendChild(tabsEl);
-    }
-  }
-  renderCalendar();
-});
-
+// Tab buttons
 document.querySelectorAll(".tab-btn").forEach(btn=>{
   btn.addEventListener("click", function(){
     const tab = this.dataset.tab;
-    if (tab === "tasks" && !taskUnlocked) {
-      document.getElementById("pwPopupBg").classList.add("show");
-      setTimeout(() => document.getElementById("pwInput").focus(), 100);
+    // ⚠️ Tasks ต้อง unlock ก่อน
+    if (tab==="tasks" && !taskUnlocked) {
+      document.getElementById("pwPopup").classList.add("show");
+      setTimeout(()=>document.getElementById("pwInput").focus(),100);
       return;
     }
-    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
-    this.classList.add("active");
-    if (tab==="config") {
-      document.getElementById("calView").style.display="none";
-      document.getElementById("configView").style.display="block";
-    } else {
-      currentTab=tab;
-      document.getElementById("calView").style.display="flex";
-      document.getElementById("configView").style.display="none";
-      renderCalendar();
+    // Tasks ที่ unlock แล้ว กดอีกครั้ง = lock
+    if (tab==="tasks" && taskUnlocked) {
+      taskUnlocked=false; currentUser=null;
+      document.getElementById("tasksTabBtn").textContent="Tasks 🔒";
+      document.getElementById("tasksTabBtn").classList.remove("unlocked","active");
+      setTab("all"); return;
     }
+    setTab(tab);
   });
 });
 
-document.getElementById("dayPopupClose").addEventListener("click",()=>document.getElementById("dayPopupBg").classList.remove("show"));
-document.getElementById("dayPopupBg").addEventListener("click",e=>{ if(e.target===document.getElementById("dayPopupBg")) document.getElementById("dayPopupBg").classList.remove("show"); });
-document.getElementById("modalClose").addEventListener("click",()=>document.getElementById("modalBg").classList.remove("show"));
-document.getElementById("modalBg").addEventListener("click",e=>{ if(e.target===document.getElementById("modalBg")) document.getElementById("modalBg").classList.remove("show"); });
+// Reset
+document.getElementById("resetBtn").addEventListener("click", ()=>{
+  document.getElementById("storeSelect").value="";
+  document.getElementById("filterDate").value="";
+  taskUnlocked=false; currentUser=null;
+  document.getElementById("tasksTabBtn").textContent="Tasks 🔒";
+  document.getElementById("tasksTabBtn").classList.remove("unlocked");
+  document.getElementById("detailStoreInfo").innerHTML='<div class="detail-empty">เลือกร้านเพื่อดูรายละเอียด</div>';
+  document.getElementById("detailTimeline").innerHTML="";
+  viewStart=getWeekStart(today);
+  setTab("all");
+});
 
+// Close popups
+document.getElementById("dayPopupClose").addEventListener("click",()=>document.getElementById("dayPopup").classList.remove("show"));
+document.getElementById("dayPopup").addEventListener("click",e=>{ if(e.target===document.getElementById("dayPopup")) document.getElementById("dayPopup").classList.remove("show"); });
+document.getElementById("confirmPopup").addEventListener("click",e=>{ if(e.target===document.getElementById("confirmPopup")) document.getElementById("confirmPopup").classList.remove("show"); });
+
+// Resizer
+const resizer = document.getElementById("resizer");
+const panel   = document.getElementById("detailPanel");
+let isResizing=false;
+resizer.addEventListener("mousedown",()=>{ isResizing=true; document.body.style.cursor="col-resize"; document.body.style.userSelect="none"; });
+document.addEventListener("mousemove",e=>{ if(!isResizing) return; const w=e.clientX; if(w>=160&&w<=500) panel.style.width=w+"px"; });
+document.addEventListener("mouseup",()=>{ isResizing=false; document.body.style.cursor=""; document.body.style.userSelect=""; });
+
+// Start
 loadData();
-
-const resizer = document.getElementById('resizer');
-const panel = document.querySelector('.detail-panel');
-let isResizing = false;
-resizer.addEventListener('mousedown', (e) => {
-  isResizing = true;
-  document.body.style.cursor = 'col-resize';
-  document.body.style.userSelect = 'none';
-});
-document.addEventListener('mousemove', (e) => {
-  if (!isResizing) return;
-  const w = e.clientX;
-  if (w >= 120 && w <= 500) panel.style.width = w + 'px';
-});
-document.addEventListener('mouseup', () => {
-  isResizing = false;
-  document.body.style.cursor = '';
-  document.body.style.userSelect = '';
-});
 </script>
 </body>
 </html>
