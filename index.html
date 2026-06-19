@@ -517,6 +517,8 @@ let currentUser  = null;
 let pendingDayPopupEvent = null; // ⚠️ ใหม่: เก็บ event ที่ถูกกดใน day popup แทนการฝัง JSON ใน onclick string
 let taskDonePollTimer = null; // ⚠️ ใหม่: handle ของ setInterval สำหรับ auto-refresh task_done
 let taskWritePending = 0;     // ⚠️ ใหม่: นับจำนวน write request ที่ค้างอยู่ กัน polling แย่งเขียนทับ
+let pendingTaskCheckbox = null;   // ⚠️ ใหม่: checkbox ที่กำลังรอ confirm อยู่ตอนนี้
+let pendingTaskOriginalState = null; // ⚠️ ใหม่: state ของ checkbox ก่อนคลิก ใช้ revert ตอนกด "ยกเลิก"
 
 const today = new Date(); today.setHours(0,0,0,0);
 function getWeekStart(d) { const x=new Date(d); x.setDate(x.getDate()-x.getDay()); x.setHours(0,0,0,0); return x; }
@@ -1178,11 +1180,24 @@ function reloadOpenAccordions() {
       ถ้า Apps Script ไม่ return ContentService.MimeType.JSON จะ error
    ════════════════════════════════════════════════════════════ */
 function toggleTaskDone(storeCode, taskLabel, checkbox) {
-  if (!currentUser) return;
+  if (!currentUser) {
+    // ⚠️ แก้ไข: เดิม return เฉยๆ ไม่บอกอะไรเลย ทำให้ checkbox ดูเหมือน
+    // "ติ๊กไม่ติด" โดยไม่มีคำอธิบาย — ตอนนี้ revert checkbox + แจ้งเตือนชัดเจน
+    checkbox.checked = !checkbox.checked;
+    alert("กรุณาใส่รหัสเพื่อปลดล็อค Tasks ก่อนติ๊กงาน");
+    return;
+  }
   const taskCol = TASK_COL_MAP[taskLabel];
   if (!taskCol) return;
   const wantsDone = checkbox.checked;
-  checkbox.checked = !wantsDone; // revert รอ confirm
+  const originalState = !wantsDone; // state ของ checkbox ก่อนที่ user จะคลิก
+  checkbox.checked = originalState; // revert รอ confirm
+
+  // ⚠️ ใหม่: เก็บ checkbox + original state ไว้ใน global state เพื่อให้
+  // ปุ่ม "ยกเลิก" ของ popup (ซึ่งเป็น handler แยกต่างหาก ผูกไว้ครั้งเดียวตอน
+  // โหลดหน้า) รู้ว่าต้อง revert checkbox ตัวไหนกลับไปที่ state ใด
+  pendingTaskCheckbox = checkbox;
+  pendingTaskOriginalState = originalState;
 
   const msg = wantsDone
     ? `ยืนยันว่า "${taskLabel}" ทำเสร็จแล้ว?`
@@ -1192,6 +1207,8 @@ function toggleTaskDone(storeCode, taskLabel, checkbox) {
   document.getElementById("confirmPopup").classList.add("show");
   document.getElementById("confirmYesBtn").onclick = async () => {
     document.getElementById("confirmPopup").classList.remove("show");
+    pendingTaskCheckbox = null; // ⚠️ เคลียร์ทันทีที่ตัดสินใจแล้ว กัน cancel handler มา revert ทับทีหลัง
+    pendingTaskOriginalState = null;
     checkbox.checked = wantsDone; // optimistic update ระหว่างรอ network
     taskWritePending++; // ⚠️ บอก polling ว่ามีการเขียนค้างอยู่ ให้รอรอบนี้ก่อน
     try {
@@ -1441,7 +1458,27 @@ document.getElementById("reminderOkBtn").addEventListener("click", ()=>document.
 document.getElementById("reminderPopup").addEventListener("click", e=>{ if(e.target===document.getElementById("reminderPopup")) document.getElementById("reminderPopup").classList.remove("show"); });
 
 // Confirm popup cancel button (task done)
-document.getElementById("confirmCancelBtn").addEventListener("click", ()=>document.getElementById("confirmPopup").classList.remove("show"));
+// ⚠️ แก้ไข bug: เดิมกด "ยกเลิก" แค่ปิด popup เฉยๆ ไม่ revert checkbox กลับ
+// ทำให้ checkbox ค้างอยู่ที่ state ชั่วคราว (ที่ตั้งไว้ตอนเปิด popup) ต่อไปเรื่อยๆ
+// เช่น A ทำ task เสร็จ (checked) → B กดติ๊กออกแล้วกด "ยกเลิก" ใน popup
+// → checkbox ของ B ควรกลับไปเป็น checked เหมือนเดิม (ค่าจริงใน Sheet ไม่เปลี่ยน)
+// แต่ของเดิมจะค้างอยู่ที่ state ที่ตั้งไว้ตอนเปิด popup ซึ่งบังเอิญเป็นค่าเดียวกัน
+// อยู่แล้วในกรณีนี้ ปัญหาจะเห็นชัดเฉพาะกรณี B เปิด popup ค้างไว้นานแล้วมีคนอื่น
+// (หรือ polling) เปลี่ยนสถานะ checkbox นั้นไปก่อน — ฟังก์ชันนี้แก้ทั้ง 2 เคส
+// ให้ revert ไปที่ "state ก่อนคลิก" อย่างถูกต้องเสมอ ไม่ใช่เดาจาก wantsDone
+function closeTaskConfirmPopup() {
+  // ⚠️ เช็ค isConnected กัน stale reference กรณี checkbox element ถูกแทนที่
+  // ไปแล้วจาก reloadOpenAccordions() ระหว่าง popup เปิดอยู่ (edge case หายาก
+  // แต่ป้องกันไว้ดีกว่า เพราะ checkbox.checked = ... บน element ที่หลุดจาก DOM
+  // แล้วจะไม่มีผลอะไรกับสิ่งที่ user เห็นบนหน้าจอจริง)
+  if (pendingTaskCheckbox && pendingTaskCheckbox.isConnected) {
+    pendingTaskCheckbox.checked = pendingTaskOriginalState;
+  }
+  pendingTaskCheckbox = null;
+  pendingTaskOriginalState = null;
+  document.getElementById("confirmPopup").classList.remove("show");
+}
+document.getElementById("confirmCancelBtn").addEventListener("click", closeTaskConfirmPopup);
 
 // Reset
 document.getElementById("resetBtn").addEventListener("click", ()=>{
@@ -1460,7 +1497,7 @@ document.getElementById("resetBtn").addEventListener("click", ()=>{
 // Close popups
 document.getElementById("dayPopupClose").addEventListener("click",()=>document.getElementById("dayPopup").classList.remove("show"));
 document.getElementById("dayPopup").addEventListener("click",e=>{ if(e.target===document.getElementById("dayPopup")) document.getElementById("dayPopup").classList.remove("show"); });
-document.getElementById("confirmPopup").addEventListener("click",e=>{ if(e.target===document.getElementById("confirmPopup")) document.getElementById("confirmPopup").classList.remove("show"); });
+document.getElementById("confirmPopup").addEventListener("click",e=>{ if(e.target===document.getElementById("confirmPopup")) closeTaskConfirmPopup(); });
 
 // Resizer
 const resizer = document.getElementById("resizer");
